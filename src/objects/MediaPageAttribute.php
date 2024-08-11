@@ -11,63 +11,65 @@ use SilverStripe\ORM\DataObject;
  *	@author Nathan Glasl <nathan@symbiote.com.au>
  */
 
-class MediaPageAttribute extends DataObject {
+class MediaPageAttribute extends DataObject
+{
+    private static $table_name = 'MediaPageAttribute';
 
-	private static $table_name = 'MediaPageAttribute';
+    private static $db = [
+        'Content' => 'HTMLText'
+    ];
 
-	private static $db = array(
-		'Content' => 'HTMLText'
-	);
+    private static $has_one = [
+        'MediaPage' => MediaPage::class,
+        'MediaAttribute' => MediaAttribute::class
+    ];
 
-	private static $has_one = array(
-		'MediaPage' => MediaPage::class,
-		'MediaAttribute' => MediaAttribute::class
-	);
+    private static $summary_fields = [
+        'Title',
+        'Content'
+    ];
 
-	private static $summary_fields = array(
-		'Title',
-		'Content'
-	);
+    public function canDelete($member = null)
+    {
 
-	public function canDelete($member = null) {
+        return false;
+    }
 
-		return false;
-	}
+    public function getTitle()
+    {
 
-	public function getTitle() {
+        return $this->MediaAttribute()->Title;
+    }
 
-		return $this->MediaAttribute()->Title;
-	}
+    public function getCMSFields()
+    {
 
-	public function getCMSFields() {
+        $fields = parent::getCMSFields();
+        $fields->removeByName('MediaPageID');
+        $fields->removeByName('MediaAttributeID');
 
-		$fields = parent::getCMSFields();
-		$fields->removeByName('MediaPageID');
-		$fields->removeByName('MediaAttributeID');
+        // Determine the field type.
 
-		// Determine the field type.
+        if(strrpos($this->getTitle(), 'Date')) {
 
-		if(strrpos($this->getTitle(), 'Date')) {
+            // The user expects this to be a date attribute.
 
-			// The user expects this to be a date attribute.
+            $fields->replaceField('Content', DateField::create(
+                'Content'
+            ));
+        } else {
 
-			$fields->replaceField('Content', DateField::create(
-				'Content'
-			));
-		}
-		else {
+            // This is most commonly a simple attribute, so a HTML field only complicates things for the user.
 
-			// This is most commonly a simple attribute, so a HTML field only complicates things for the user.
+            $fields->replaceField('Content', TextareaField::create(
+                'Content'
+            ));
+        }
 
-			$fields->replaceField('Content', TextareaField::create(
-				'Content'
-			));
-		}
+        // Allow extension customisation.
 
-		// Allow extension customisation.
-
-		$this->extend('updateMediaPageAttributeCMSFields', $fields);
-		return $fields;
-	}
+        $this->extend('updateMediaPageAttributeCMSFields', $fields);
+        return $fields;
+    }
 
 }

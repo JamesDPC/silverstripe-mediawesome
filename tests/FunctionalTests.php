@@ -12,62 +12,63 @@ use SilverStripe\Dev\FunctionalTest;
  *	@author Nathan Glasl <nathan@symbiote.com.au>
  */
 
-class FunctionalTests extends FunctionalTest {
+class FunctionalTests extends FunctionalTest
+{
+    protected $usesDatabase = true;
 
-	protected $usesDatabase = true;
+    protected $requireDefaultRecordsFrom = [
+        MediaPage::class
+    ];
 
-	protected $requireDefaultRecordsFrom = array(
-		MediaPage::class
-	);
+    public function testURLs()
+    {
 
-	public function testURLs() {
+        $this->logInWithPermission();
 
-		$this->logInWithPermission();
+        // Instantiate a media page with a random type.
 
-		// Instantiate a media page with a random type.
+        $holder = MediaHolder::create(
+            [
+                'ClassName' => MediaHolder::class,
+                'Title' => 'Holder',
+                'URLFormatting' => 'y/MM/dd/',
+                'MediaTypeID' => MediaType::get()->first()->ID
+            ]
+        );
+        $holder->writeToStage('Stage');
+        $holder->publishRecursive();
+        $first = MediaPage::create(
+            [
+                'Title' => 'First',
+                'ParentID' => $holder->ID
+            ]
+        );
+        $first->writeToStage('Stage');
+        $first->publishRecursive();
 
-		$holder = MediaHolder::create(
-			array(
-				'ClassName' => MediaHolder::class,
-				'Title' => 'Holder',
-				'URLFormatting' => 'y/MM/dd/',
-				'MediaTypeID' => MediaType::get()->first()->ID
-			)
-		);
-		$holder->writeToStage('Stage');
-		$holder->publishRecursive();
-		$first = MediaPage::create(
-			array(
-				'Title' => 'First',
-				'ParentID' => $holder->ID
-			)
-		);
-		$first->writeToStage('Stage');
-		$first->publishRecursive();
+        // This should match "holder/year/month/day/media".
 
-		// This should match "holder/year/month/day/media".
+        $this->assertEquals(count(explode('/', trim($first->Link(), '/'))), 5);
 
-		$this->assertEquals(count(explode('/', trim($first->Link(), '/'))), 5);
+        // Determine whether the page is accessible.
 
-		// Determine whether the page is accessible.
+        $response = $this->get($first->Link());
+        $this->assertEquals($response->getStatusCode(), 200);
 
-		$response = $this->get($first->Link());
-		$this->assertEquals($response->getStatusCode(), 200);
+        // Update the URL format.
 
-		// Update the URL format.
+        $holder->URLFormatting = '-';
+        $holder->writeToStage('Stage');
+        $holder->publishRecursive();
 
-		$holder->URLFormatting = '-';
-		$holder->writeToStage('Stage');
-		$holder->publishRecursive();
+        // This should match "holder/media".
 
-		// This should match "holder/media".
+        $this->assertEquals(count(explode('/', trim($first->Link(), '/'))), 2);
 
-		$this->assertEquals(count(explode('/', trim($first->Link(), '/'))), 2);
+        // Determine whether the page remains accessible.
 
-		// Determine whether the page remains accessible.
-
-		$response = $this->get($first->Link());
-		$this->assertEquals($response->getStatusCode(), 200);
-	}
+        $response = $this->get($first->Link());
+        $this->assertEquals($response->getStatusCode(), 200);
+    }
 
 }

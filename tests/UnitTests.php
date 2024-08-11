@@ -14,93 +14,94 @@ use SilverStripe\Versioned\Versioned;
  *	@author Nathan Glasl <nathan@symbiote.com.au>
  */
 
-class UnitTests extends SapphireTest {
+class UnitTests extends SapphireTest
+{
+    protected $usesDatabase = true;
 
-	protected $usesDatabase = true;
+    protected $requireDefaultRecordsFrom = [
+        MediaPage::class
+    ];
 
-	protected $requireDefaultRecordsFrom = array(
-		MediaPage::class
-	);
+    public function testMediaAttributes()
+    {
 
-	public function testMediaAttributes() {
+        // Instantiate some media pages with a random type.
 
-		// Instantiate some media pages with a random type.
+        $type = MediaType::get()->first();
+        $holder = MediaHolder::create(
+            [
+                'Title' => 'Holder',
+                'MediaTypeID' => $type->ID
+            ]
+        );
+        $holder->writeToStage('Stage');
+        $holder->publishRecursive();
+        $first = MediaPage::create(
+            [
+                'Title' => 'First',
+                'ParentID' => $holder->ID
+            ]
+        );
+        $first->writeToStage('Stage');
+        $first->publishRecursive();
+        $second = MediaPage::create(
+            [
+                'Title' => 'Second',
+                'ParentID' => $holder->ID
+            ]
+        );
+        $second->writeToStage('Stage');
+        $second->publishRecursive();
 
-		$type = MediaType::get()->first();
-		$holder = MediaHolder::create(
-			array(
-				'Title' => 'Holder',
-				'MediaTypeID' => $type->ID
-			)
-		);
-		$holder->writeToStage('Stage');
-		$holder->publishRecursive();
-		$first = MediaPage::create(
-			array(
-				'Title' => 'First',
-				'ParentID' => $holder->ID
-			)
-		);
-		$first->writeToStage('Stage');
-		$first->publishRecursive();
-		$second = MediaPage::create(
-			array(
-				'Title' => 'Second',
-				'ParentID' => $holder->ID
-			)
-		);
-		$second->writeToStage('Stage');
-		$second->publishRecursive();
+        // Determine whether a media page has the respective media attributes.
 
-		// Determine whether a media page has the respective media attributes.
+        $attribute = $first->MediaAttributes()->first();
+        $expected = $type->MediaAttributes()->first();
+        $this->assertEquals($attribute->ID, $expected->ID);
+        $this->assertEquals($attribute->getJoin()->Content, null);
 
-		$attribute = $first->MediaAttributes()->first();
-		$expected = $type->MediaAttributes()->first();
-		$this->assertEquals($attribute->ID, $expected->ID);
-		$this->assertEquals($attribute->getJoin()->Content, null);
+        // Update the media attribute content.
 
-		// Update the media attribute content.
+        $first->MediaAttributes()->add($attribute, [
+            'Content' => 'Changed'
+        ]);
 
-		$first->MediaAttributes()->add($attribute, array(
-			'Content' => 'Changed'
-		));
+        // Determine whether this change is reflected by the first page.
 
-		// Determine whether this change is reflected by the first page.
+        $attribute = $first->MediaAttributes()->first();
+        $this->assertEquals($attribute->getJoin()->Content, 'Changed');
 
-		$attribute = $first->MediaAttributes()->first();
-		$this->assertEquals($attribute->getJoin()->Content, 'Changed');
+        // Confirm this change is not reflected by the second page.
 
-		// Confirm this change is not reflected by the second page.
+        $attribute = $second->MediaAttributes()->first();
+        $this->assertEquals($attribute->ID, $expected->ID);
+        $this->assertEquals($attribute->getJoin()->Content, null);
 
-		$attribute = $second->MediaAttributes()->first();
-		$this->assertEquals($attribute->ID, $expected->ID);
-		$this->assertEquals($attribute->getJoin()->Content, null);
+        // The attributes are versioned, so make sure this change wasn't published.
 
-		// The attributes are versioned, so make sure this change wasn't published.
+        Versioned::set_stage('Live');
+        $first = MediaPage::get()->byID($first->ID);
+        $attribute = $first->MediaAttributes()->first();
+        $this->assertEquals($attribute->getJoin()->Content, null);
+        $first->publishRecursive();
 
-		Versioned::set_stage('Live');
-		$first = MediaPage::get()->byID($first->ID);
-		$attribute = $first->MediaAttributes()->first();
-		$this->assertEquals($attribute->getJoin()->Content, null);
-		$first->publishRecursive();
+        // Confirm this change is now published.
 
-		// Confirm this change is now published.
+        $attribute = $first->MediaAttributes()->first();
+        $this->assertEquals($attribute->getJoin()->Content, 'Changed');
 
-		$attribute = $first->MediaAttributes()->first();
-		$this->assertEquals($attribute->getJoin()->Content, 'Changed');
+        // Determine whether a new media attribute appears on the page.
 
-		// Determine whether a new media attribute appears on the page.
-
-		$count = $first->MediaAttributes()->count();
-		$new = MediaAttribute::create(
-			array(
-				'Title' => 'New',
-				'MediaTypeID' => $type->ID
-			)
-		);
-		$new->write();
-		$this->assertEquals($first->MediaAttributes()->count(), $count + 1);
-		Versioned::set_stage('Stage');
-	}
+        $count = $first->MediaAttributes()->count();
+        $new = MediaAttribute::create(
+            [
+                'Title' => 'New',
+                'MediaTypeID' => $type->ID
+            ]
+        );
+        $new->write();
+        $this->assertEquals($first->MediaAttributes()->count(), $count + 1);
+        Versioned::set_stage('Stage');
+    }
 
 }

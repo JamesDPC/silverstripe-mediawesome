@@ -9,61 +9,65 @@ use SilverStripe\ORM\DataObject;
  *	@author Nathan Glasl <nathan@symbiote.com.au>
  */
 
-class MediaTag extends DataObject {
+class MediaTag extends DataObject
+{
+    private static $table_name = 'MediaTag';
 
-	private static $table_name = 'MediaTag';
+    private static $db = [
+        'Title' => 'Varchar(255)'
+    ];
 
-	private static $db = array(
-		'Title' => 'Varchar(255)'
-	);
+    private static $default_sort = 'Title';
 
-	private static $default_sort = 'Title';
+    public function canView($member = null)
+    {
 
-	public function canView($member = null) {
+        return true;
+    }
 
-		return true;
-	}
+    public function canEdit($member = null)
+    {
 
-	public function canEdit($member = null) {
+        return true;
+    }
 
-		return true;
-	}
+    public function canCreate($member = null, $context = [])
+    {
 
-	public function canCreate($member = null, $context = array()) {
+        return true;
+    }
 
-		return true;
-	}
+    public function canDelete($member = null)
+    {
 
-	public function canDelete($member = null) {
+        return false;
+    }
 
-		return false;
-	}
+    /**
+     *	Confirm that the current tag is valid.
+     */
 
-	/**
-	 *	Confirm that the current tag is valid.
-	 */
+    public function validate()
+    {
 
-	public function validate() {
+        $result = parent::validate();
 
-		$result = parent::validate();
+        // Confirm that the current tag has been given a title and doesn't already exist.
 
-		// Confirm that the current tag has been given a title and doesn't already exist.
+        $this->Title = strtolower($this->Title);
+        if($result->isValid() && !$this->Title) {
+            $result->addError('"Title" required!');
+        } elseif($result->isValid() && MediaTag::get_one(MediaTag::class, [
+            'ID != ?' => $this->ID,
+            'Title = ?' => $this->Title
+        ])) {
+            $result->addError('Tag already exists!');
+        }
 
-		$this->Title = strtolower($this->Title);
-		if($result->isValid() && !$this->Title) {
-			$result->addError('"Title" required!');
-		}
-		else if($result->isValid() && MediaTag::get_one(MediaTag::class, array(
-			'ID != ?' => $this->ID,
-			'Title = ?' => $this->Title
-		))) {
-			$result->addError('Tag already exists!');
-		}
+        // Allow extension customisation.
 
-		// Allow extension customisation.
-
-		$this->extend('validateMediaTag', $result);
-		return $result;
-	}
+        $this->extend('validateMediaTag', $result);
+        return $result;
+    }
 
 }

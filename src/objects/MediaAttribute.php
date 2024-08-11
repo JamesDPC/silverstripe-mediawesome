@@ -12,151 +12,162 @@ use SilverStripe\Versioned\Versioned;
  *	@author Nathan Glasl <nathan@symbiote.com.au>
  */
 
-class MediaAttribute extends DataObject {
+class MediaAttribute extends DataObject
+{
+    private static $table_name = 'MediaAttribute';
 
-	private static $table_name = 'MediaAttribute';
+    private static $db = [
+        'Title' => 'Varchar(255)',
+        'OriginalTitle' => 'Varchar(255)'
+    ];
 
-	private static $db = array(
-		'Title' => 'Varchar(255)',
-		'OriginalTitle' => 'Varchar(255)'
-	);
+    private static $has_one = [
+        'MediaType' => MediaType::class
+    ];
 
-	private static $has_one = array(
-		'MediaType' => MediaType::class
-	);
+    private static $belongs_many_many = [
+        'MediaPages' => MediaPage::class . '.MediaAttributes'
+    ];
 
-	private static $belongs_many_many = array(
-		'MediaPages' => MediaPage::class . '.MediaAttributes'
-	);
+    public function canView($member = null)
+    {
 
-	public function canView($member = null) {
+        return true;
+    }
 
-		return true;
-	}
+    public function canEdit($member = null)
+    {
 
-	public function canEdit($member = null) {
+        return $this->checkPermissions($member);
+    }
 
-		return $this->checkPermissions($member);
-	}
+    public function canCreate($member = null, $context = [])
+    {
 
-	public function canCreate($member = null, $context = array()) {
+        return $this->checkPermissions($member);
+    }
 
-		return $this->checkPermissions($member);
-	}
+    public function canDelete($member = null)
+    {
 
-	public function canDelete($member = null) {
+        // Determine whether this is being used.
 
-		// Determine whether this is being used.
+        $current = Versioned::get_stage();
+        foreach(singleton(Versioned::class)->getVersionedStages() as $stage) {
+            Versioned::set_stage($stage);
+            if($this->MediaPages()->exists() && $this->MediaPages()->where('MediaPageAttribute.Content IS NOT NULL')->exists()) {
+                return false;
+            }
+        }
+        Versioned::set_stage($current);
 
-		$current = Versioned::get_stage();
-		foreach(singleton(Versioned::class)->getVersionedStages() as $stage) {
-			Versioned::set_stage($stage);
-			if($this->MediaPages()->exists() && $this->MediaPages()->where('MediaPageAttribute.Content IS NOT NULL')->exists()) {
-				return false;
-			}
-		}
-		Versioned::set_stage($current);
+        // Determine whether this is user created.
 
-		// Determine whether this is user created.
+        $config = MediaPage::config();
+        $type = $this->MediaType()->Title;
+        return !isset($config->type_defaults[$type]) || !in_array($this->OriginalTitle, $config->type_defaults[$type]);
+    }
 
-		$config = MediaPage::config();
-		$type = $this->MediaType()->Title;
-		return !isset($config->type_defaults[$type]) || !in_array($this->OriginalTitle, $config->type_defaults[$type]);
-	}
+    /**
+     *	Determine access for the current CMS user from the site configuration permissions.
+     *
+     *	@parameter <{CURRENT_MEMBER}> member
+     *	@return boolean
+     */
 
-	/**
-	 *	Determine access for the current CMS user from the site configuration permissions.
-	 *
-	 *	@parameter <{CURRENT_MEMBER}> member
-	 *	@return boolean
-	 */
+    public function checkPermissions($member = null)
+    {
 
-	public function checkPermissions($member = null) {
+        // Retrieve the current site configuration permissions for customisation of media.
 
-		// Retrieve the current site configuration permissions for customisation of media.
+        $configuration = SiteConfig::current_site_config();
+        return Permission::check($configuration->MediaPermission, 'any', $member);
+    }
 
-		$configuration = SiteConfig::current_site_config();
-		return Permission::check($configuration->MediaPermission, 'any', $member);
-	}
+    public function getCMSFields()
+    {
 
-	public function getCMSFields() {
+        $fields = parent::getCMSFields();
+        $fields->removeByName('OriginalTitle');
+        $fields->removeByName('MediaTypeID');
+        $fields->removeByName('MediaPages');
 
-		$fields = parent::getCMSFields();
-		$fields->removeByName('OriginalTitle');
-		$fields->removeByName('MediaTypeID');
-		$fields->removeByName('MediaPages');
+        // Allow extension customisation.
 
-		// Allow extension customisation.
+        $this->extend('updateMediaAttributeCMSFields', $fields);
+        return $fields;
+    }
 
-		$this->extend('updateMediaAttributeCMSFields', $fields);
-		return $fields;
-	}
+    /**
+     *	Confirm that the current attribute is valid.
+     */
 
-	/**
-	 *	Confirm that the current attribute is valid.
-	 */
+    public function validate()
+    {
 
-	public function validate() {
+        $result = parent::validate();
 
-		$result = parent::validate();
+        // Confirm that the current attribute has been given a title.
 
-		// Confirm that the current attribute has been given a title.
+        if($result->isValid() && !$this->Title) {
+            $result->addError('"Title" required!');
+        }
 
-		if($result->isValid() && !$this->Title) {
-			$result->addError('"Title" required!');
-		}
+        // Allow extension customisation.
 
-		// Allow extension customisation.
+        $this->extend('validateMediaAttribute', $result);
+        return $result;
+    }
 
-		$this->extend('validateMediaAttribute', $result);
-		return $result;
-	}
+    public function onBeforeWrite()
+    {
 
-	public function onBeforeWrite() {
+        parent::onBeforeWrite();
 
-		parent::onBeforeWrite();
+        // Set the original title of the current attribute for use in templates.
 
-		// Set the original title of the current attribute for use in templates.
+        if(!$this->OriginalTitle) {
+            $this->OriginalTitle = $this->Title;
+        }
+    }
 
-		if(!$this->OriginalTitle) {
-			$this->OriginalTitle = $this->Title;
-		}
-	}
+    public function onAfterWrite()
+    {
 
-	public function onAfterWrite() {
+        parent::onAfterWrite();
 
-		parent::onAfterWrite();
+        // This needs to appear on media pages of the respective type.
 
-		// This needs to appear on media pages of the respective type.
+        foreach(MediaPage::get()->filter('MediaTypeID', $this->MediaTypeID) as $page) {
+            $page->MediaAttributes()->add($this);
+        }
+    }
 
-		foreach(MediaPage::get()->filter('MediaTypeID', $this->MediaTypeID) as $page) {
- 			$page->MediaAttributes()->add($this);
- 		}
-	}
+    public function onAfterDelete()
+    {
 
-	public function onAfterDelete() {
+        parent::onAfterDelete();
 
-		parent::onAfterDelete();
+        // Clean up the pages associated with this.
 
-		// Clean up the pages associated with this.
+        $current = Versioned::get_stage();
+        foreach(singleton(Versioned::class)->getVersionedStages() as $stage) {
+            Versioned::set_stage($stage);
+            MediaPageAttribute::get()->filter('MediaAttributeID', $this->ID)->removeAll();
+        }
+        Versioned::set_stage($current);
+    }
 
-		$current = Versioned::get_stage();
-		foreach(singleton(Versioned::class)->getVersionedStages() as $stage) {
-			Versioned::set_stage($stage);
-			MediaPageAttribute::get()->filter('MediaAttributeID', $this->ID)->removeAll();
-		}
-		Versioned::set_stage($current);
-	}
+    /**
+     *	Retrieve a class name of the current attribute for use in templates.
+     *
+     *	@return string
+     */
 
-	/**
-	 *	Retrieve a class name of the current attribute for use in templates.
-	 *
-	 *	@return string
-	 */
+    public function getTemplateClass()
+    {
 
-	public function getTemplateClass() {
-
-		return strtolower($this->OriginalTitle);
-	}
+        return strtolower($this->OriginalTitle);
+    }
 
 }
