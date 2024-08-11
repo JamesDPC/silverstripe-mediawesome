@@ -29,6 +29,7 @@ class MediaPageController extends \PageController
         if($type->exists()) {
             $templates[] = 'MediaPage_' . str_replace(' ', '', $type->Title);
         }
+
         $templates[] = 'MediaPage';
         $templates[] = 'Page';
         $this->extend('updateTemplates', $templates);

@@ -20,7 +20,7 @@ class FunctionalTests extends FunctionalTest
         MediaPage::class
     ];
 
-    public function testURLs()
+    public function testURLs(): void
     {
 
         $this->logInWithPermission();
@@ -37,6 +37,7 @@ class FunctionalTests extends FunctionalTest
         );
         $holder->writeToStage('Stage');
         $holder->publishRecursive();
+
         $first = MediaPage::create(
             [
                 'Title' => 'First',

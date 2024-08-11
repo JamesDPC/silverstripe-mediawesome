@@ -14,18 +14,18 @@ use SilverStripe\Versioned\Versioned;
 
 class MediaAttribute extends DataObject
 {
-    private static $table_name = 'MediaAttribute';
+    private static string $table_name = 'MediaAttribute';
 
-    private static $db = [
+    private static array $db = [
         'Title' => 'Varchar(255)',
         'OriginalTitle' => 'Varchar(255)'
     ];
 
-    private static $has_one = [
+    private static array $has_one = [
         'MediaType' => MediaType::class
     ];
 
-    private static $belongs_many_many = [
+    private static array $belongs_many_many = [
         'MediaPages' => MediaPage::class . '.MediaAttributes'
     ];
 
@@ -59,6 +59,7 @@ class MediaAttribute extends DataObject
                 return false;
             }
         }
+
         Versioned::set_stage($current);
 
         // Determine whether this is user created.
@@ -155,16 +156,14 @@ class MediaAttribute extends DataObject
             Versioned::set_stage($stage);
             MediaPageAttribute::get()->filter('MediaAttributeID', $this->ID)->removeAll();
         }
+
         Versioned::set_stage($current);
     }
 
     /**
      *	Retrieve a class name of the current attribute for use in templates.
-     *
-     *	@return string
      */
-
-    public function getTemplateClass()
+    public function getTemplateClass(): string
     {
 
         return strtolower($this->OriginalTitle);

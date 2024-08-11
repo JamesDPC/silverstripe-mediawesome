@@ -22,7 +22,7 @@ use SilverStripe\ORM\PaginatedList;
 
 class MediaHolderController extends \PageController
 {
-    private static $allowed_actions = [
+    private static array $allowed_actions = [
         'handleURL',
         'getDateFilterForm',
         'dateFilter',
@@ -43,6 +43,7 @@ class MediaHolderController extends \PageController
         if($type->exists()) {
             $templates[] = 'MediaHolder_' . str_replace(' ', '', $type->Title);
         }
+
         $templates[] = 'MediaHolder';
         $templates[] = 'Page';
         $this->extend('updateTemplates', $templates);
@@ -70,12 +71,15 @@ class MediaHolderController extends \PageController
         if($limitVar = $request->getVar('limit')) {
             $limit = ($limitVar > 100) ? 100 : $limitVar;
         }
+
         if($sortVar = $request->getVar('sort')) {
             $sort = $sortVar;
         }
+
         if($orderVar = $request->getVar('order')) {
             $order = $orderVar;
         }
+
         $from = $request->getVar('from');
         $category = $request->getVar('category');
         $tag = $request->getVar('tag');
@@ -89,7 +93,7 @@ class MediaHolderController extends \PageController
         if($from) {
             $valid = true;
             $date = [];
-            foreach(explode('-', $from) as $segment) {
+            foreach(explode('-', (string) $from) as $segment) {
                 if(!is_numeric($segment)) {
                     $valid = false;
                     break;
@@ -97,6 +101,7 @@ class MediaHolderController extends \PageController
                     $date[] = str_pad($segment, 2, '0', STR_PAD_LEFT);
                 }
             }
+
             if($valid) {
 
                 // This is used to determine the direction to filter, so it makes sense from a user's perspective.
@@ -107,6 +112,7 @@ class MediaHolderController extends \PageController
                 } else {
                     $direction = '>=';
                 }
+
                 $from = implode('-', $date);
                 $children = $children->where([
                     "Date {$direction} ?" => $from
@@ -117,20 +123,20 @@ class MediaHolderController extends \PageController
         // Determine both category and tag result sets separately, since they both share a database table.
 
         $temporary = $children;
-        if($category) {
-            $children = $categoryChildren = $temporary->filter('Categories.Title', $category);
+        if ($category) {
+            $children = $temporary->filter('Categories.Title', $category);
+            $categoryChildren = $children;
         }
-        if($tag) {
-            $children = $tagChildren = $temporary->filter('Tags.Title', $tag);
+
+        if ($tag) {
+            $children = $temporary->filter('Tags.Title', $tag);
+            $tagChildren = $children;
         }
 
         // Merge both category and tag result sets.
 
         if($category && $tag) {
-            $intersection = array_uintersect($categoryChildren->toArray(), $tagChildren->toArray(), function ($first, $second) {
-
-                return $first->ID - $second->ID;
-            });
+            $intersection = array_uintersect($categoryChildren->toArray(), $tagChildren->toArray(), fn($first, $second): int|float => $first->ID - $second->ID);
             $children = ArrayList::create($intersection);
         }
 
@@ -191,6 +197,7 @@ class MediaHolderController extends \PageController
             while(!$request->allParsed()) {
                 $request->shift();
             }
+
             return $output;
         } elseif(!is_numeric($URL)) {
 
@@ -204,6 +211,7 @@ class MediaHolderController extends \PageController
                 while(!$request->allParsed()) {
                     $request->shift();
                 }
+
                 return $response;
             } else {
 
@@ -231,66 +239,59 @@ class MediaHolderController extends \PageController
 
             $iteration = 1;
             foreach($remaining as $segment) {
-                if(is_null($action)) {
+                $request->shift();
+                if($child) {
 
-                    // Update the current request.
+                    // Determine whether a controller action has been defined.
 
-                    $request->shift();
-                    if($child) {
+                    $action = $segment;
+                    break;
+                } elseif(!is_numeric($segment)) {
+                    if($iteration === 4) {
 
-                        // Determine whether a controller action has been defined.
+                        // The remaining URL doesn't match the month/day/media format.
 
-                        $action = $segment;
-                        break;
-                    } elseif(!is_numeric($segment)) {
-                        if($iteration === 4) {
+                        return $this->httpError(404);
+                    }
 
-                            // The remaining URL doesn't match the month/day/media format.
+                    // Determine the media page child to display, using the URL segment and date.
+
+                    $children = MediaPage::get()->filter([
+                        'ParentID' => $this->data()->ID,
+                        'URLSegment' => $segment
+                    ]);
+                    $date = [];
+                    foreach($segments as $previous) {
+                        $date[] = str_pad($previous, 2, '0', STR_PAD_LEFT);
+                    }
+                    $children = $children->filter([
+                        'Date:StartsWith' => implode('-', $date)
+                    ]);
+
+                    $child = $children->first();
+
+                    // Determine whether a media page child once existed, and redirect appropriately.
+
+                    if(is_null($child)) {
+                        $response = $this->resolveURL();
+                        if($response) {
+
+                            // The current request URL has been successfully parsed.
+
+                            while(!$request->allParsed()) {
+                                $request->shift();
+                            }
+
+                            return $response;
+                        } else {
+
+                            // The URL doesn't match the month/day/media format.
 
                             return $this->httpError(404);
                         }
-
-                        // Determine the media page child to display, using the URL segment and date.
-
-                        $children = MediaPage::get()->filter([
-                            'ParentID' => $this->data()->ID,
-                            'URLSegment' => $segment
-                        ]);
-                        if(!empty($segments)) {
-
-                            // Apply a partial match against the date, since the previous URL segments may only contain the year/month.
-
-                            $date = [];
-                            foreach($segments as $previous) {
-                                $date[] = str_pad($previous, 2, '0', STR_PAD_LEFT);
-                            }
-                            $children = $children->filter([
-                                'Date:StartsWith' => implode('-', $date)
-                            ]);
-                        }
-                        $child = $children->first();
-
-                        // Determine whether a media page child once existed, and redirect appropriately.
-
-                        if(is_null($child)) {
-                            $response = $this->resolveURL();
-                            if($response) {
-
-                                // The current request URL has been successfully parsed.
-
-                                while(!$request->allParsed()) {
-                                    $request->shift();
-                                }
-                                return $response;
-                            } else {
-
-                                // The URL doesn't match the month/day/media format.
-
-                                return $this->httpError(404);
-                            }
-                        }
                     }
                 }
+
                 $segments[] = $segment;
                 $iteration++;
             }
@@ -312,6 +313,7 @@ class MediaHolderController extends \PageController
                     while(!$request->allParsed()) {
                         $request->shift();
                     }
+
                     return $output;
                 } else {
 
@@ -346,7 +348,7 @@ class MediaHolderController extends \PageController
      *	@return http response
      */
 
-    private function resolveURL()
+    private function resolveURL(): ?\SilverStripe\Control\HTTPResponse
     {
 
         // Retrieve the current request URL segments.
@@ -375,8 +377,8 @@ class MediaHolderController extends \PageController
 
             // Appropriately redirect towards the updated media page URL.
 
-            $response = new HTTPResponse();
-            return $response->redirect(self::join_links($resolution, !empty($parameters) ? '?' . http_build_query($parameters) : null), 301);
+            $response = \SilverStripe\Control\HTTPResponse::create();
+            return $response->redirect(self::join_links($resolution, empty($parameters) ? null : '?' . http_build_query($parameters)), 301);
         } else {
 
             // The media page child doesn't resolve.
@@ -446,7 +448,7 @@ class MediaHolderController extends \PageController
      *	Request media page children from the filtered date.
      */
 
-    public function dateFilter()
+    public function dateFilter(): \SilverStripe\Control\HTTPResponse
     {
 
         // Apply the from date filter.
@@ -471,6 +473,7 @@ class MediaHolderController extends \PageController
             $link = HTTP::setGetVar('category', $category, $link, $separator);
             $separator = '&';
         }
+
         if($tag) {
             $link = HTTP::setGetVar('tag', $tag, $link, $separator);
         }
@@ -488,7 +491,7 @@ class MediaHolderController extends \PageController
      *	Request all media page children.
      */
 
-    public function clearFilters()
+    public function clearFilters(): \SilverStripe\Control\HTTPResponse
     {
 
         // Clear any custom request filters.

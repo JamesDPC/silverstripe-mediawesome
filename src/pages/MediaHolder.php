@@ -15,26 +15,26 @@ use SilverStripe\Forms\ReadonlyField;
 
 class MediaHolder extends \Page
 {
-    private static $table_name = 'MediaHolder';
+    private static string $table_name = 'MediaHolder';
 
-    private static $db = [
+    private static array $db = [
         'URLFormatting' => "Enum('y/MM/dd/, y/MM/, y/, -', 'y/MM/dd/')"
     ];
 
-    private static $has_one = [
+    private static array $has_one = [
         'MediaType' => MediaType::class
     ];
 
-    private static $allowed_children = [
+    private static array $allowed_children = [
         MediaHolder::class,
         MediaPage::class
     ];
 
-    private static $default_child = MediaPage::class;
+    private static string $default_child = MediaPage::class;
 
-    private static $description = '<strong>Holds:</strong> Blogs, Events, News, Publications <strong>or Custom Media</strong>';
+    private static string $description = '<strong>Holds:</strong> Blogs, Events, News, Publications <strong>or Custom Media</strong>';
 
-    private static $icon = 'nglasl/silverstripe-mediawesome: client/images/holder.png';
+    private static string $icon = 'nglasl/silverstripe-mediawesome: client/images/holder.png';
 
     public function getCMSFields()
     {

@@ -13,18 +13,18 @@ use SilverStripe\ORM\DataObject;
 
 class MediaPageAttribute extends DataObject
 {
-    private static $table_name = 'MediaPageAttribute';
+    private static string $table_name = 'MediaPageAttribute';
 
-    private static $db = [
+    private static array $db = [
         'Content' => 'HTMLText'
     ];
 
-    private static $has_one = [
+    private static array $has_one = [
         'MediaPage' => MediaPage::class,
         'MediaAttribute' => MediaAttribute::class
     ];
 
-    private static $summary_fields = [
+    private static array $summary_fields = [
         'Title',
         'Content'
     ];

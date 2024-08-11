@@ -31,19 +31,19 @@ use SilverStripe\View\Requirements;
 
 class MediaPage extends \Page
 {
-    private static $table_name = 'MediaPage';
+    private static string $table_name = 'MediaPage';
 
-    private static $db = [
+    private static array $db = [
         'ExternalLink' => 'Varchar(255)',
         'Abstract' => 'Text',
         'Date' => 'Date'
     ];
 
-    private static $has_one = [
+    private static array $has_one = [
         'MediaType' => MediaType::class
     ];
 
-    private static $many_many = [
+    private static array $many_many = [
         'MediaAttributes' => [
             'through' => MediaPageAttribute::class, // This is essentially the versioned join.
             'from' => 'MediaPage',
@@ -55,38 +55,38 @@ class MediaPage extends \Page
         'Tags' => MediaTag::class
     ];
 
-    private static $owns = [
+    private static array $owns = [
         'MediaPageAttributes',
         'Images',
         'Attachments'
     ];
 
-    private static $defaults = [
+    private static array $defaults = [
         'ShowInMenus' => 0
     ];
 
-    private static $searchable_fields = [
+    private static array $searchable_fields = [
         'Title',
         'ExternalLink',
         'Abstract',
         'Tagging'
     ];
 
-    private static $can_be_root = false;
+    private static bool $can_be_root = false;
 
-    private static $allowed_children = 'none';
+    private static string $allowed_children = 'none';
 
-    private static $default_parent = MediaHolder::class;
+    private static string $default_parent = MediaHolder::class;
 
-    private static $description = 'Blog, Event, News, Publication <strong>or Custom Media</strong>';
+    private static string $description = 'Blog, Event, News, Publication <strong>or Custom Media</strong>';
 
-    private static $icon = 'nglasl/silverstripe-mediawesome: client/images/page.png';
+    private static string $icon = 'nglasl/silverstripe-mediawesome: client/images/page.png';
 
     /**
      *  The default media types and their respective attributes.
      */
 
-    private static $type_defaults = [];
+    private static array $type_defaults = [];
 
     public function requireDefaultRecords()
     {
@@ -125,7 +125,7 @@ class MediaPage extends \Page
                 'LinkID ASC'
             );
             $attributes = $attributes->execute();
-            if(count($attributes)) {
+            if(count($attributes) > 0) {
 
                 // With the results from above, delete these to prevent data integrity issues.
 
@@ -145,6 +145,7 @@ class MediaPage extends \Page
 
                         continue;
                     }
+
                     if($existing['LinkID'] == -1) {
 
                         // Instantiate a new attribute for each "master" attribute.
@@ -162,7 +163,7 @@ class MediaPage extends \Page
 
                     // Each page will have different content for a media attribute.
 
-                    $content = isset($existing['Content']) ? $existing['Content'] : null;
+                    $content = $existing['Content'] ?? null;
                     $page->MediaAttributes()->add($attribute, [
                         'Content' => $content
                     ]);
@@ -206,6 +207,7 @@ class MediaPage extends \Page
                 $type->write();
                 DB::alteration_message("\"{$name}\" Media Type", 'created');
             }
+
             if(is_array($attributes)) {
                 foreach($attributes as $attribute) {
 
@@ -304,6 +306,7 @@ class MediaPage extends \Page
         ));
         $images->setAllowedFileCategories('image/supported');
         $images->setFolderName("media-{$type}/{$this->ID}/images");
+
         $fields->addFieldToTab('Root.ImagesAttachments', $attachments = Injector::inst()->create(
             FileHandleField::class,
             'Attachments'
@@ -338,6 +341,7 @@ class MediaPage extends \Page
             } else {
                 $message = "The media holder type doesn't match this!";
             }
+
             $error = new HTTPResponse_Exception($message, 403);
             $error->getResponse()->addHeader('X-Status', rawurlencode($message));
 
@@ -346,6 +350,7 @@ class MediaPage extends \Page
             $this->extend('validateMediaPage', $error);
             throw $error;
         }
+
         return parent::validate();
     }
 
@@ -366,7 +371,7 @@ class MediaPage extends \Page
             // The following code was taken from RedirectorPage::onBeforeWrite()
             // on SilverStripe 4.1.1
             if ($this->ExternalLink &&
-                substr($this->ExternalLink, 0, 2) !== '//') {
+                !str_starts_with($this->ExternalLink, '//')) {
                 $urlParts = parse_url($this->ExternalLink);
                 if ($urlParts) {
                     if (empty($urlParts['scheme'])) {
@@ -386,7 +391,7 @@ class MediaPage extends \Page
             }
 
             $file_headers = @get_headers($this->ExternalLink);
-            if(!$file_headers || strripos($file_headers[0], '404 Not Found')) {
+            if($file_headers === [] || $file_headers === false || strripos((string) $file_headers[0], '404 Not Found')) {
                 $this->ExternalLink = null;
             }
         }
@@ -428,10 +433,12 @@ class MediaPage extends \Page
         if($this->ExternalLink) {
             return $this->ExternalLink;
         }
+
         $parent = $this->getParent();
         if(!$parent) {
             return null;
         }
+
         $date = ($parent->URLFormatting !== '-') ? $this->dbObject('Date')->Format($parent->URLFormatting ?: 'y/MM/dd/') : '';
         $join = [
             $parent->Link(),
@@ -440,8 +447,7 @@ class MediaPage extends \Page
         if($action && is_string($action)) {
             $join[] = "{$action}/";
         }
-        $link = Controller::join_links($join);
-        return $link;
+        return Controller::join_links($join);
     }
 
     /**
@@ -453,15 +459,18 @@ class MediaPage extends \Page
         if($this->ExternalLink) {
             return $this->ExternalLink;
         }
+
         $parent = $this->getParent();
         if(!$parent) {
             return null;
         }
+
         $date = ($parent->URLFormatting !== '-') ? $this->dbObject('Date')->Format($parent->URLFormatting ?: 'y/MM/dd/') : '';
         $link = $parent->AbsoluteLink() . "{$date}{$this->URLSegment}/";
         if($action && is_string($action)) {
             $link .= "{$action}/";
         }
+
         return $link;
     }
 

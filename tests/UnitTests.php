@@ -22,7 +22,7 @@ class UnitTests extends SapphireTest
         MediaPage::class
     ];
 
-    public function testMediaAttributes()
+    public function testMediaAttributes(): void
     {
 
         // Instantiate some media pages with a random type.
@@ -36,6 +36,7 @@ class UnitTests extends SapphireTest
         );
         $holder->writeToStage('Stage');
         $holder->publishRecursive();
+
         $first = MediaPage::create(
             [
                 'Title' => 'First',
@@ -44,6 +45,7 @@ class UnitTests extends SapphireTest
         );
         $first->writeToStage('Stage');
         $first->publishRecursive();
+
         $second = MediaPage::create(
             [
                 'Title' => 'Second',

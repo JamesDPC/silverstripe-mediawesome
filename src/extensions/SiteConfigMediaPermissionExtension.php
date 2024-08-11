@@ -19,7 +19,7 @@ class SiteConfigMediaPermissionExtension extends DataExtension
      *	Append an additional media permission field to the site configuration.
      */
 
-    private static $db = [
+    private static array $db = [
         'MediaPermission' => "Enum('ADMIN, SITETREE_EDIT_ALL', 'ADMIN')"
     ];
 
@@ -41,7 +41,7 @@ class SiteConfigMediaPermissionExtension extends DataExtension
             $fields->addFieldToTab('Root.Access', $options = ReadonlyField::create(
                 'Media',
                 'Who can customise media?',
-                $permissions[$this->owner->MediaPermission]
+                $permissions[$this->getOwner()->MediaPermission]
             ));
         } else {
 
@@ -56,7 +56,7 @@ class SiteConfigMediaPermissionExtension extends DataExtension
 
         // Allow extension customisation.
 
-        $this->owner->extend('updateSiteConfigMediaPermissionExtensionCMSFields', $fields);
+        $this->getOwner()->extend('updateSiteConfigMediaPermissionExtensionCMSFields', $fields);
     }
 
 }

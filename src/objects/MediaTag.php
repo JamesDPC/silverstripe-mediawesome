@@ -11,13 +11,13 @@ use SilverStripe\ORM\DataObject;
 
 class MediaTag extends DataObject
 {
-    private static $table_name = 'MediaTag';
+    private static string $table_name = 'MediaTag';
 
-    private static $db = [
+    private static array $db = [
         'Title' => 'Varchar(255)'
     ];
 
-    private static $default_sort = 'Title';
+    private static string $default_sort = 'Title';
 
     public function canView($member = null)
     {
@@ -55,7 +55,7 @@ class MediaTag extends DataObject
         // Confirm that the current tag has been given a title and doesn't already exist.
 
         $this->Title = strtolower($this->Title);
-        if($result->isValid() && !$this->Title) {
+        if($result->isValid() && ($this->Title === '' || $this->Title === '0')) {
             $result->addError('"Title" required!');
         } elseif($result->isValid() && MediaTag::get_one(MediaTag::class, [
             'ID != ?' => $this->ID,

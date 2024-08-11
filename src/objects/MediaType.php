@@ -17,17 +17,17 @@ use SilverStripe\SiteConfig\SiteConfig;
 
 class MediaType extends DataObject
 {
-    private static $table_name = 'MediaType';
+    private static string $table_name = 'MediaType';
 
-    private static $db = [
+    private static array $db = [
         'Title' => 'Varchar(255)'
     ];
 
-    private static $has_many = [
+    private static array $has_many = [
         'MediaAttributes' => MediaAttribute::class
     ];
 
-    private static $default_sort = 'Title';
+    private static string $default_sort = 'Title';
 
     public function canView($member = null)
     {
