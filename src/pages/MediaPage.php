@@ -122,17 +122,17 @@ class MediaPage extends \Page
             $attributes = new SQLSelect(
                 '*',
                 'MediaAttribute',
-                'LinkID <> 0 AND MediaPageID <> 0',
-                'LinkID ASC'
+                ['"LinkID" <> 0','"MediaPageID" <> 0'],
+                ['LinkID' => 'ASC']
             );
             $attributes = $attributes->execute();
-            if(count($attributes) > 0) {
+            if($attributes) {
 
                 // With the results from above, delete these to prevent data integrity issues.
 
                 $delete = new SQLDelete(
                     'MediaAttribute',
-                    'LinkID <> 0 AND MediaPageID <> 0'
+                    ['"LinkID" <> 0','"MediaPageID" <> 0']
                 );
                 $delete->execute();
 
