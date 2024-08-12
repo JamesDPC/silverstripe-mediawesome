@@ -136,7 +136,7 @@ class MediaHolderController extends \PageController
         // Merge both category and tag result sets.
 
         if($category && $tag) {
-            $intersection = array_uintersect($categoryChildren->toArray(), $tagChildren->toArray(), fn($first, $second): int|float => $first->ID - $second->ID);
+            $intersection = array_uintersect($categoryChildren->toArray(), $tagChildren->toArray(), fn ($first, $second): int|float => $first->ID - $second->ID);
             $children = ArrayList::create($intersection);
         }
 
