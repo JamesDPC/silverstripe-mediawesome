@@ -37,8 +37,9 @@ class MediaHolderController extends \PageController
     {
 
         // Use a custom media type holder template if one exists.
-
-        $type = $this->data()->MediaType();
+        /** @var MediaPage $page */
+        $page = $this->data();
+        $type = $page->MediaType();
         $templates = [];
         if($type->exists()) {
             $templates[] = 'MediaHolder_' . str_replace(' ', '', $type->Title);
@@ -59,10 +60,9 @@ class MediaHolderController extends \PageController
      *	@URLfilter <{FROM_DATE}> date
      *	@URLfilter <{CATEGORY_FILTER}> string
      *	@URLfilter <{TAG_FILTER}> string
-     *	@return paginated list
      */
 
-    public function getPaginatedChildren($limit = 5, $sort = 'Date', $order = 'DESC')
+    public function getPaginatedChildren($limit = 5, $sort = 'Date', $order = 'DESC'): PaginatedList
     {
 
         // Retrieve custom request filters.
@@ -158,10 +158,9 @@ class MediaHolderController extends \PageController
      *	@URLfilter <{FROM_DATE}> date
      *	@URLfilter <{CATEGORY_FILTER}> string
      *	@URLfilter <{TAG_FILTER}> string
-     *	@return paginated list
      */
 
-    public function PaginatedChildren($limit = 5, $sort = 'Date', $order = 'DESC')
+    public function PaginatedChildren($limit = 5, $sort = 'Date', $order = 'DESC'): PaginatedList
     {
 
         // This provides consistency when it comes to defining parameters from the template.
@@ -176,10 +175,9 @@ class MediaHolderController extends \PageController
      *	@URLparameter <{MONTH}> integer
      *	@URLparameter <{DAY}> integer
      *	@URLparameter <{MEDIA_URL_SEGMENT}> string
-     *	@return http response
      */
 
-    public function handleURL()
+    public function handleURL(): mixed
     {
 
         // Retrieve the formatted URL.
@@ -344,8 +342,6 @@ class MediaHolderController extends \PageController
 
     /**
      *	Determine whether a media page child once existed for the current request, and redirect appropriately.
-     *
-     *	@return http response
      */
 
     private function resolveURL(): ?\SilverStripe\Control\HTTPResponse

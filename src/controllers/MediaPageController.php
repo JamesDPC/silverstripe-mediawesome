@@ -23,8 +23,7 @@ class MediaPageController extends \PageController
         }
 
         // Use a custom media type page template if one exists.
-
-        $type = $this->data()->MediaType();
+        $type = $page->MediaType();
         $templates = [];
         if($type->exists()) {
             $templates[] = 'MediaPage_' . str_replace(' ', '', $type->Title);
