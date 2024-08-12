@@ -17,6 +17,7 @@ use SilverStripe\Forms\LiteralField;
 use SilverStripe\Forms\ReadonlyField;
 use SilverStripe\Forms\TextareaField;
 use SilverStripe\Forms\TextField;
+use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DB;
 use SilverStripe\ORM\Queries\SQLDelete;
 use SilverStripe\ORM\Queries\SQLSelect;
@@ -29,473 +30,486 @@ use SilverStripe\View\Requirements;
  *  @author Nathan Glasl <nathan@symbiote.com.au>
  */
 
-class MediaPage extends \Page {
-
-	private static $table_name = 'MediaPage';
-
-	private static $db = array(
-		'ExternalLink' => 'Varchar(255)',
-		'Abstract' => 'Text',
-		'Date' => 'Date'
-	);
-
-	private static $has_one = array(
-		'MediaType' => MediaType::class
-	);
-
-	private static $many_many = array(
-		'MediaAttributes' => array(
-			'through' => MediaPageAttribute::class, // This is essentially the versioned join.
-			'from' => 'MediaPage',
-			'to' => 'MediaAttribute'
-		),
-		'Images' => Image::class,
-		'Attachments' => File::class,
-		'Categories' => MediaTag::class,
-		'Tags' => MediaTag::class
-	);
-
-	private static $owns = array(
-		'MediaPageAttributes',
-		'Images',
-		'Attachments'
-	);
-
-	private static $defaults = array(
-		'ShowInMenus' => 0
-	);
-
-	private static $searchable_fields = array(
-		'Title',
-		'ExternalLink',
-		'Abstract',
-		'Tagging'
-	);
-
-	private static $can_be_root = false;
-
-	private static $allowed_children = 'none';
-
-	private static $default_parent = MediaHolder::class;
-
-	private static $description = 'Blog, Event, News, Publication <strong>or Custom Media</strong>';
-
-	private static $icon = 'nglasl/silverstripe-mediawesome: client/images/page.png';
-
-	/**
-	 *  The default media types and their respective attributes.
-	 */
-
-	private static $type_defaults = array();
-
-	public function requireDefaultRecords() {
-
-		parent::requireDefaultRecords();
-
-		// Determine whether this requires an SS3 to SS4 migration.
-
-		if(MediaAttribute::get()->filter('MediaTypeID', 0)->exists()) {
-
-			// The problem is that class name mapping happens after this, but we need it right now to query pages.
-
-			foreach(array(
-				'SiteTree',
-				'SiteTree_Live',
-				'SiteTree_Versions'
-			) as $table) {
-				$update = new SQLUpdate(
-					$table,
-					array(
-						'ClassName' => MediaPage::class
-					),
-					array(
-						'ClassName' => 'MediaPage'
-					)
-				);
-				$update->execute();
-			}
-
-			// Retrieve the existing media attributes.
-
-			$attributes = new SQLSelect(
-				'*',
-				'MediaAttribute',
-				'LinkID <> 0 AND MediaPageID <> 0',
-				'LinkID ASC'
-			);
-			$attributes = $attributes->execute();
-			if(count($attributes)) {
-
-				// With the results from above, delete these to prevent data integrity issues.
-
-				$delete = new SQLDelete(
-					'MediaAttribute',
-					'LinkID <> 0 AND MediaPageID <> 0'
-				);
-				$delete->execute();
-
-				// Migrate the existing media attributes.
-
-				foreach($attributes as $existing) {
-					$page = MediaPage::get()->byID($existing['MediaPageID']);
-					if(!$page) {
-
-						// This page may no longer exist.
-
-						continue;
-					}
-					if($existing['LinkID'] == -1) {
-
-						// Instantiate a new attribute for each "master" attribute.
-
-						$attribute = MediaAttribute::create();
-						$attribute->ID = $existing['ID'];
-						$attribute->Created = $existing['Created'];
-						$attribute->Title = $existing['Title'];
-						$attribute->OriginalTitle = $existing['OriginalTitle'];
-						$attribute->MediaTypeID = $page->MediaTypeID;
-						$attribute->write();
-					}
-					else {
-						$attribute = MediaAttribute::get()->byID($existing['LinkID']);
-					}
-
-					// Each page will have different content for a media attribute.
-
-					$content = isset($existing['Content']) ? $existing['Content'] : null;
-					$page->MediaAttributes()->add($attribute, array(
-						'Content' => $content
-					));
-
-					// The attributes are versioned, but should only be published when it's considered safe to do so.
-
-					if($page->isPublished() && !$page->isModifiedOnDraft()) {
-						$page->publishRecursive();
-					}
-				}
-			}
-		}
-
-		// Retrieve existing "start time" attributes.
-
-		$attributes = MediaAttribute::get()->filter(array(
-			'MediaType.Title' => 'Event',
-			'OriginalTitle' => 'Start Time'
-		));
-		foreach($attributes as $attribute) {
-
-			// These should now be "time" attributes.
-
-			$attribute->Title = 'Time';
-			$attribute->OriginalTitle = 'Time';
-			$attribute->write();
-		}
-
-		// Instantiate the default media types and their respective attributes.
-
-		foreach($this->config()->type_defaults as $name => $attributes) {
-
-			// Confirm that the media type doesn't already exist before creating it.
-
-			$type = MediaType::get()->filter(array(
-				'Title' => $name
-			))->first();
-			if(!$type) {
-				$type = MediaType::create();
-				$type->Title = $name;
-				$type->write();
-				DB::alteration_message("\"{$name}\" Media Type", 'created');
-			}
-			if(is_array($attributes)) {
-				foreach($attributes as $attribute) {
-
-					// Confirm that the media attributes don't already exist before creating them.
-
-					if(!MediaAttribute::get()->filter(array(
-						'MediaTypeID' => $type->ID,
-						'OriginalTitle' => $attribute
-					))->first()) {
-						$new = MediaAttribute::create();
-						$new->Title = $attribute;
-						$new->MediaTypeID = $type->ID;
-						$new->write();
-						DB::alteration_message("\"{$name}\" > \"{$attribute}\" Media Attribute", 'created');
-					}
-				}
-			}
-		}
-	}
-
-	public function getCMSFields() {
-
-		$fields = parent::getCMSFields();
-
-		// Display the media type as read only.
-
-		$fields->addFieldToTab('Root.Main', ReadonlyField::create(
-			'Type',
-			'Type',
-			$this->MediaType()->Title
-		), 'Title');
-
-		// Display a notification that the parent holder contains mixed children.
-
-		$parent = $this->getParent();
-		if($parent && $parent->getMediaHolderChildren()->exists()) {
-			Requirements::css('nglasl/silverstripe-mediawesome: client/css/mediawesome.css');
-			$fields->addFieldToTab('Root.Main', LiteralField::create(
-				'MediaNotification',
-				"<p class='mediawesome notification'><strong>Mixed {$this->MediaType()->Title} Holder</strong></p>"
-			), 'Type');
-		}
-
-		// Display the remaining media page fields.
-
-		$fields->addFieldToTab('Root.Main', TextField::create(
-			'ExternalLink'
-		)->setDescription('An <strong>optional</strong> redirect URL to the media source. If this field is not empty, it will make this page act like a RedirectorPage.'), 'URLSegment');
-		$fields->addFieldToTab('Root.Main', DateField::create(
-			'Date'
-		), 'Content');
-
-		// Allow customisation of categories and tags respective to the current page.
-
-		$tags = MediaTag::get()->map()->toArray();
-		$fields->findOrMakeTab('Root.CategoriesTags', 'Categories and Tags');
-		$fields->addFieldToTab('Root.CategoriesTags', $categoriesList = ListboxField::create(
-			'Categories',
-			'Categories',
-			$tags
-		));
-		$fields->addFieldToTab('Root.CategoriesTags', $tagsList = ListboxField::create(
-			'Tags',
-			'Tags',
-			$tags
-		));
-		if(!$tags) {
-			$categoriesList->setAttribute('disabled', 'true');
-			$tagsList->setAttribute('disabled', 'true');
-		}
-
-		// Display an abstract field for content summarisation.
-
-		$fields->addfieldToTab('Root.Main', $abstract = TextareaField::create(
-			'Abstract'
-		), 'Content');
-		$abstract->setDescription('A concise summary of the content');
-
-		// Allow customisation of the media type attributes.
-
-		$fields->addFieldToTab('Root.Main', GridField::create(
-			'MediaPageAttributes',
-			"{$this->MediaType()->Title} Attributes",
-			$this->MediaPageAttributes(),
-			GridFieldConfig_RecordEditor::create()->removeComponentsByType(GridFieldAddNewButton::class)
-		)->addExtraClass('pb-2'), 'Content');
-
-		// Allow customisation of images and attachments.
-
-		$type = strtolower($this->MediaType()->Title);
-		$fields->findOrMakeTab('Root.ImagesAttachments', 'Images and Attachments');
-		$fields->addFieldToTab('Root.ImagesAttachments', $images = Injector::inst()->create(
-			FileHandleField::class,
-			'Images'
-		));
-		$images->setAllowedFileCategories('image/supported');
-		$images->setFolderName("media-{$type}/{$this->ID}/images");
-		$fields->addFieldToTab('Root.ImagesAttachments', $attachments = Injector::inst()->create(
-			FileHandleField::class,
-			'Attachments'
-		));
-		$attachments->setFolderName("media-{$type}/{$this->ID}/attachments");
-
-		// Allow extension customisation.
-
-		$this->extend('updateMediaPageCMSFields', $fields);
-		return $fields;
-	}
-
-	/**
-	 *  Confirm that the current page is valid.
-	 */
-
-	public function validate() {
-
-		$parent = $this->getParent();
-
-		// The URL segment will conflict with a year/month/day/media format when numeric.
-
-		if(is_numeric($this->URLSegment) || !($parent instanceof MediaHolder) || ($this->MediaTypeID && ($parent->MediaTypeID != $this->MediaTypeID))) {
-
-			// Customise a validation error message.
-
-			if(is_numeric($this->URLSegment)) {
-				$message = '"URL Segment" must not be numeric!';
-			}
-			else if(!($parent instanceof MediaHolder)) {
-				$message = 'The parent needs to be a published media holder!';
-			}
-			else {
-				$message = "The media holder type doesn't match this!";
-			}
-			$error = new HTTPResponse_Exception($message, 403);
-			$error->getResponse()->addHeader('X-Status', rawurlencode($message));
-
-			// Allow extension customisation.
-
-			$this->extend('validateMediaPage', $error);
-			throw $error;
-		}
-		return parent::validate();
-	}
-
-	public function onBeforeWrite() {
-
-		parent::onBeforeWrite();
-
-		// Set the default media page date.
-
-		if(!$this->Date) {
-			$this->Date = date('Y-m-d');
-		}
-
-		// Confirm that the external link exists.
-
-		if($this->ExternalLink) {
-			// The following code was taken from RedirectorPage::onBeforeWrite()
-			// on SilverStripe 4.1.1
-			if ($this->ExternalLink &&
-				substr($this->ExternalLink, 0, 2) !== '//') {
-				$urlParts = parse_url($this->ExternalLink);
-				if ($urlParts) {
-					if (empty($urlParts['scheme'])) {
-						// no scheme, assume http
-						$this->ExternalLink = 'http://' . $this->ExternalLink;
-					} elseif (!in_array($urlParts['scheme'], array(
-						'http',
-						'https',
-					))) {
-						// we only allow http(s) urls
-						$this->ExternalLink = '';
-					}
-				} else {
-					// malformed URL to reject
-					$this->ExternalLink = '';
-				}
-			}
-
-			$file_headers = @get_headers($this->ExternalLink);
-			if(!$file_headers || strripos($file_headers[0], '404 Not Found')) {
-				$this->ExternalLink = null;
-			}
-		}
-
-		// Apply the parent holder media type.
-
-		$parent = $this->getParent();
-		if($parent) {
-			$type = $parent->MediaType();
-			if($type->exists()) {
-				$this->MediaTypeID = $type->ID;
-			}
-		}
-	}
-
-	public function onAfterWrite() {
-
-		parent::onAfterWrite();
-
-		// This triggers for both a save and publish, causing duplicate attributes to appear.
-
-		if(Versioned::get_stage() === 'Stage') {
-
-			// The attributes of the respective type need to appear on this page.
-
-			foreach($this->MediaType()->MediaAttributes() as $attribute) {
-				$this->MediaAttributes()->add($attribute);
-			}
-		}
-	}
-
-	/**
-	 *  Determine the URL by using the media holder's defined URL format.
-	 */
-
-	public function Link($action = null) {
-		if($this->ExternalLink) {
-			return $this->ExternalLink;
-		}
-		$parent = $this->getParent();
-		if(!$parent) {
-			return null;
-		}
-		$date = ($parent->URLFormatting !== '-') ? $this->dbObject('Date')->Format($parent->URLFormatting ?: 'y/MM/dd/') : '';
-		$join = array(
-			$parent->Link(),
-			"{$date}{$this->URLSegment}/"
-		);
-		if($action && is_string($action)) {
-			$join[] = "{$action}/";
-		}
-		$link = Controller::join_links($join);
-		return $link;
-	}
-
-	/**
-	 *  Determine the absolute URL by using the media holder's defined URL format.
-	 */
-
-	public function AbsoluteLink($action = null) {
-		if($this->ExternalLink) {
-			return $this->ExternalLink;
-		}
-		$parent = $this->getParent();
-		if(!$parent) {
-			return null;
-		}
-		$date = ($parent->URLFormatting !== '-') ? $this->dbObject('Date')->Format($parent->URLFormatting ?: 'y/MM/dd/') : '';
-		$link = $parent->AbsoluteLink() . "{$date}{$this->URLSegment}/";
-		if($action && is_string($action)) {
-			$link .= "{$action}/";
-		}
-		return $link;
-	}
-
-	/**
-	 *  Retrieve the versioned attribute join records, since these are what we're editing.
-	 *
-	 *  @return media page attribute
-	 */
-
-	public function MediaPageAttributes() {
-
-		return MediaPageAttribute::get()->filter('MediaPageID', $this->ID);
-	}
-
-	/**
-	 *  Retrieve a specific attribute for use in templates.
-	 *
-	 *  @parameter <{ATTRIBUTE}> string
-	 *  @return media attribute
-	 */
-
-	public function getAttribute($title) {
-
-		return $this->MediaAttributes()->filter('OriginalTitle', $title)->first();
-	}
-
-	/**
-	 *  Retrieve a specific attribute for use in templates.
-	 *
-	 *  @parameter <{ATTRIBUTE}> string
-	 *  @return media attribute
-	 */
-
-	public function Attribute($title) {
-
-		// This provides consistency when it comes to defining parameters from the template.
-
-		return $this->getAttribute($title);
-	}
+class MediaPage extends \Page
+{
+    private static string $table_name = 'MediaPage';
+
+    private static array $db = [
+        'ExternalLink' => 'Varchar(255)',
+        'Abstract' => 'Text',
+        'Date' => 'Date'
+    ];
+
+    private static array $has_one = [
+        'MediaType' => MediaType::class
+    ];
+
+    private static array $many_many = [
+        'MediaAttributes' => [
+            'through' => MediaPageAttribute::class, // This is essentially the versioned join.
+            'from' => 'MediaPage',
+            'to' => 'MediaAttribute'
+        ],
+        'Images' => Image::class,
+        'Attachments' => File::class,
+        'Categories' => MediaTag::class,
+        'Tags' => MediaTag::class
+    ];
+
+    private static array $owns = [
+        'MediaPageAttributes',
+        'Images',
+        'Attachments'
+    ];
+
+    private static array $defaults = [
+        'ShowInMenus' => 0
+    ];
+
+    private static array $searchable_fields = [
+        'Title',
+        'ExternalLink',
+        'Abstract',
+        'Tagging'
+    ];
+
+    private static bool $can_be_root = false;
+
+    private static string $allowed_children = 'none';
+
+    private static string $default_parent = MediaHolder::class;
+
+    private static string $description = 'Blog, Event, News, Publication <strong>or Custom Media</strong>';
+
+    private static string $icon = 'nglasl/silverstripe-mediawesome: client/images/page.png';
+
+    /**
+     *  The default media types and their respective attributes.
+     */
+
+    private static array $type_defaults = [];
+
+    public function requireDefaultRecords()
+    {
+
+        parent::requireDefaultRecords();
+
+        // Determine whether this requires an SS3 to SS4 migration.
+
+        if(MediaAttribute::get()->filter('MediaTypeID', 0)->exists()) {
+
+            // The problem is that class name mapping happens after this, but we need it right now to query pages.
+
+            foreach([
+                'SiteTree',
+                'SiteTree_Live',
+                'SiteTree_Versions'
+            ] as $table) {
+                $update = new SQLUpdate(
+                    $table,
+                    [
+                        'ClassName' => MediaPage::class
+                    ],
+                    [
+                        'ClassName' => 'MediaPage'
+                    ]
+                );
+                $update->execute();
+            }
+
+            // Retrieve the existing media attributes.
+
+            $attributes = new SQLSelect(
+                '*',
+                'MediaAttribute',
+                ['"LinkID" <> 0','"MediaPageID" <> 0'],
+                ['LinkID' => 'ASC']
+            );
+            $attributes = $attributes->execute();
+            if($attributes) {
+
+                // With the results from above, delete these to prevent data integrity issues.
+
+                $delete = new SQLDelete(
+                    'MediaAttribute',
+                    ['"LinkID" <> 0','"MediaPageID" <> 0']
+                );
+                $delete->execute();
+
+                // Migrate the existing media attributes.
+
+                foreach($attributes as $existing) {
+                    $page = MediaPage::get()->byID($existing['MediaPageID']);
+                    if(!$page) {
+
+                        // This page may no longer exist.
+
+                        continue;
+                    }
+
+                    if($existing['LinkID'] == -1) {
+
+                        // Instantiate a new attribute for each "master" attribute.
+
+                        $attribute = MediaAttribute::create();
+                        $attribute->ID = $existing['ID'];
+                        $attribute->Created = $existing['Created'];
+                        $attribute->Title = $existing['Title'];
+                        $attribute->OriginalTitle = $existing['OriginalTitle'];
+                        $attribute->MediaTypeID = $page->MediaTypeID;
+                        $attribute->write();
+                    } else {
+                        $attribute = MediaAttribute::get()->byID($existing['LinkID']);
+                    }
+
+                    // Each page will have different content for a media attribute.
+
+                    $content = $existing['Content'] ?? null;
+                    $page->MediaAttributes()->add($attribute, [
+                        'Content' => $content
+                    ]);
+
+                    // The attributes are versioned, but should only be published when it's considered safe to do so.
+
+                    if($page->isPublished() && !$page->isModifiedOnDraft()) {
+                        $page->publishRecursive();
+                    }
+                }
+            }
+        }
+
+        // Retrieve existing "start time" attributes.
+
+        $attributes = MediaAttribute::get()->filter([
+            'MediaType.Title' => 'Event',
+            'OriginalTitle' => 'Start Time'
+        ]);
+        foreach($attributes as $attribute) {
+
+            // These should now be "time" attributes.
+
+            $attribute->Title = 'Time';
+            $attribute->OriginalTitle = 'Time';
+            $attribute->write();
+        }
+
+        // Instantiate the default media types and their respective attributes.
+
+        foreach($this->config()->type_defaults as $name => $attributes) {
+
+            // Confirm that the media type doesn't already exist before creating it.
+
+            $type = MediaType::get()->filter([
+                'Title' => $name
+            ])->first();
+            if(!$type) {
+                $type = MediaType::create();
+                $type->Title = $name;
+                $type->write();
+                DB::alteration_message("\"{$name}\" Media Type", 'created');
+            }
+
+            if(is_array($attributes)) {
+                foreach($attributes as $attribute) {
+
+                    // Confirm that the media attributes don't already exist before creating them.
+
+                    if(!MediaAttribute::get()->filter([
+                        'MediaTypeID' => $type->ID,
+                        'OriginalTitle' => $attribute
+                    ])->first()) {
+                        $new = MediaAttribute::create();
+                        $new->Title = $attribute;
+                        $new->MediaTypeID = $type->ID;
+                        $new->write();
+                        DB::alteration_message("\"{$name}\" > \"{$attribute}\" Media Attribute", 'created');
+                    }
+                }
+            }
+        }
+    }
+
+    public function getCMSFields()
+    {
+
+        $fields = parent::getCMSFields();
+
+        // Display the media type as read only.
+
+        $fields->addFieldToTab('Root.Main', ReadonlyField::create(
+            'Type',
+            'Type',
+            $this->MediaType()->Title
+        ), 'Title');
+
+        // Display a notification that the parent holder contains mixed children.
+        /** @var MediaHolder $parent **/
+        $parent = $this->getParent();
+        if($parent && $parent->getMediaHolderChildren()->exists()) {
+            Requirements::css('nglasl/silverstripe-mediawesome: client/css/mediawesome.css');
+            $fields->addFieldToTab('Root.Main', LiteralField::create(
+                'MediaNotification',
+                "<p class='mediawesome notification'><strong>Mixed {$this->MediaType()->Title} Holder</strong></p>"
+            ), 'Type');
+        }
+
+        // Display the remaining media page fields.
+
+        $fields->addFieldToTab('Root.Main', TextField::create(
+            'ExternalLink'
+        )->setDescription('An <strong>optional</strong> redirect URL to the media source. If this field is not empty, it will make this page act like a RedirectorPage.'), 'URLSegment');
+        $fields->addFieldToTab('Root.Main', DateField::create(
+            'Date'
+        ), 'Content');
+
+        // Allow customisation of categories and tags respective to the current page.
+
+        $tags = MediaTag::get()->map()->toArray();
+        $fields->findOrMakeTab('Root.CategoriesTags', 'Categories and Tags');
+        $fields->addFieldToTab('Root.CategoriesTags', $categoriesList = ListboxField::create(
+            'Categories',
+            'Categories',
+            $tags
+        ));
+        $fields->addFieldToTab('Root.CategoriesTags', $tagsList = ListboxField::create(
+            'Tags',
+            'Tags',
+            $tags
+        ));
+        if(!$tags) {
+            $categoriesList->setAttribute('disabled', 'true');
+            $tagsList->setAttribute('disabled', 'true');
+        }
+
+        // Display an abstract field for content summarisation.
+
+        $fields->addfieldToTab('Root.Main', $abstract = TextareaField::create(
+            'Abstract'
+        ), 'Content');
+        $abstract->setDescription('A concise summary of the content');
+
+        // Allow customisation of the media type attributes.
+
+        $fields->addFieldToTab('Root.Main', GridField::create(
+            'MediaPageAttributes',
+            "{$this->MediaType()->Title} Attributes",
+            $this->MediaPageAttributes(),
+            GridFieldConfig_RecordEditor::create()->removeComponentsByType(GridFieldAddNewButton::class)
+        )->addExtraClass('pb-2'), 'Content');
+
+        // Allow customisation of images and attachments.
+
+        $type = strtolower($this->MediaType()->Title);
+        $fields->findOrMakeTab('Root.ImagesAttachments', 'Images and Attachments');
+        $fields->addFieldToTab('Root.ImagesAttachments', $images = Injector::inst()->create(
+            FileHandleField::class,
+            'Images'
+        ));
+        $images->setAllowedFileCategories('image/supported');
+        $images->setFolderName("media-{$type}/{$this->ID}/images");
+
+        $fields->addFieldToTab('Root.ImagesAttachments', $attachments = Injector::inst()->create(
+            FileHandleField::class,
+            'Attachments'
+        ));
+        $attachments->setFolderName("media-{$type}/{$this->ID}/attachments");
+
+        // Allow extension customisation.
+
+        $this->extend('updateMediaPageCMSFields', $fields);
+        return $fields;
+    }
+
+    /**
+     *  Confirm that the current page is valid.
+     */
+
+    public function validate()
+    {
+
+        $parent = $this->getParent();
+
+        // The URL segment will conflict with a year/month/day/media format when numeric.
+
+        if(is_numeric($this->URLSegment) || !($parent instanceof MediaHolder) || ($this->MediaTypeID && ($parent->MediaTypeID != $this->MediaTypeID))) {
+
+            // Customise a validation error message.
+
+            if(is_numeric($this->URLSegment)) {
+                $message = '"URL Segment" must not be numeric!';
+            } elseif(!($parent instanceof MediaHolder)) {
+                $message = 'The parent needs to be a published media holder!';
+            } else {
+                $message = "The media holder type doesn't match this!";
+            }
+
+            $error = new HTTPResponse_Exception($message, 403);
+            $error->getResponse()->addHeader('X-Status', rawurlencode($message));
+
+            // Allow extension customisation.
+
+            $this->extend('validateMediaPage', $error);
+            throw $error;
+        }
+
+        return parent::validate();
+    }
+
+    public function onBeforeWrite()
+    {
+
+        parent::onBeforeWrite();
+
+        // Set the default media page date.
+
+        if(!$this->Date) {
+            $this->Date = date('Y-m-d');
+        }
+
+        // Confirm that the external link exists.
+
+        if($this->ExternalLink) {
+            // The following code was taken from RedirectorPage::onBeforeWrite()
+            // on SilverStripe 4.1.1
+            if ($this->ExternalLink &&
+                !str_starts_with($this->ExternalLink, '//')) {
+                $urlParts = parse_url($this->ExternalLink);
+                if ($urlParts) {
+                    if (empty($urlParts['scheme'])) {
+                        // no scheme, assume http
+                        $this->ExternalLink = 'http://' . $this->ExternalLink;
+                    } elseif (!in_array($urlParts['scheme'], [
+                        'http',
+                        'https',
+                    ])) {
+                        // we only allow http(s) urls
+                        $this->ExternalLink = '';
+                    }
+                } else {
+                    // malformed URL to reject
+                    $this->ExternalLink = '';
+                }
+            }
+
+            $file_headers = @get_headers($this->ExternalLink);
+            if($file_headers === [] || $file_headers === false || strripos((string) $file_headers[0], '404 Not Found')) {
+                $this->ExternalLink = null;
+            }
+        }
+
+        // Apply the parent holder media type.
+        /** @var MediaHolder $parent **/
+        $parent = $this->getParent();
+        if($parent) {
+            $type = $parent->MediaType();
+            if($type->exists()) {
+                $this->MediaTypeID = $type->ID;
+            }
+        }
+    }
+
+    public function onAfterWrite()
+    {
+
+        parent::onAfterWrite();
+
+        // This triggers for both a save and publish, causing duplicate attributes to appear.
+
+        if(Versioned::get_stage() === 'Stage') {
+
+            // The attributes of the respective type need to appear on this page.
+
+            foreach($this->MediaType()->MediaAttributes() as $attribute) {
+                $this->MediaAttributes()->add($attribute);
+            }
+        }
+    }
+
+    /**
+     *  Determine the URL by using the media holder's defined URL format.
+     */
+
+    public function Link($action = null)
+    {
+        if($this->ExternalLink) {
+            return $this->ExternalLink;
+        }
+
+        $parent = $this->getParent();
+        if(!$parent) {
+            return '';
+        }
+
+        $date = ($parent->URLFormatting !== '-') ? $this->dbObject('Date')->Format($parent->URLFormatting ?: 'y/MM/dd/') : '';
+        $join = [
+            $parent->Link(),
+            "{$date}{$this->URLSegment}/"
+        ];
+        if($action && is_string($action)) {
+            $join[] = "{$action}/";
+        }
+
+        return Controller::join_links($join);
+    }
+
+    /**
+     *  Determine the absolute URL by using the media holder's defined URL format.
+     */
+
+    public function AbsoluteLink($action = null)
+    {
+        if($this->ExternalLink) {
+            return $this->ExternalLink;
+        }
+
+        $parent = $this->getParent();
+        if(!$parent) {
+            return '';
+        }
+
+        $date = ($parent->URLFormatting !== '-') ? $this->dbObject('Date')->Format($parent->URLFormatting ?: 'y/MM/dd/') : '';
+        $link = $parent->AbsoluteLink() . "{$date}{$this->URLSegment}/";
+        if($action && is_string($action)) {
+            $link .= "{$action}/";
+        }
+
+        return $link;
+    }
+
+    /**
+     *  Retrieve the versioned attribute join records, since these are what we're editing.
+     */
+
+    public function MediaPageAttributes(): DataList
+    {
+
+        return MediaPageAttribute::get()->filter('MediaPageID', $this->ID);
+    }
+
+    /**
+     *  Retrieve a specific attribute for use in templates.
+     *
+     *  @parameter <{ATTRIBUTE}> string
+     */
+
+    public function getAttribute(string $title): MediaAttribute
+    {
+
+        return $this->MediaAttributes()->filter('OriginalTitle', $title)->first();
+    }
+
+    /**
+     *  Retrieve a specific attribute for use in templates.
+     *
+     *  @parameter <{ATTRIBUTE}> string
+     */
+
+    public function Attribute(string $title): MediaAttribute
+    {
+
+        // This provides consistency when it comes to defining parameters from the template.
+
+        return $this->getAttribute($title);
+    }
 
 }
