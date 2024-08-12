@@ -17,6 +17,7 @@ use SilverStripe\Forms\LiteralField;
 use SilverStripe\Forms\ReadonlyField;
 use SilverStripe\Forms\TextareaField;
 use SilverStripe\Forms\TextField;
+use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DB;
 use SilverStripe\ORM\Queries\SQLDelete;
 use SilverStripe\ORM\Queries\SQLSelect;
@@ -242,7 +243,7 @@ class MediaPage extends \Page
         ), 'Title');
 
         // Display a notification that the parent holder contains mixed children.
-
+        /** @var MediaHolder $parent **/
         $parent = $this->getParent();
         if($parent && $parent->getMediaHolderChildren()->exists()) {
             Requirements::css('nglasl/silverstripe-mediawesome: client/css/mediawesome.css');
@@ -397,7 +398,7 @@ class MediaPage extends \Page
         }
 
         // Apply the parent holder media type.
-
+        /** @var MediaHolder $parent **/
         $parent = $this->getParent();
         if($parent) {
             $type = $parent->MediaType();
@@ -436,7 +437,7 @@ class MediaPage extends \Page
 
         $parent = $this->getParent();
         if(!$parent) {
-            return null;
+            return '';
         }
 
         $date = ($parent->URLFormatting !== '-') ? $this->dbObject('Date')->Format($parent->URLFormatting ?: 'y/MM/dd/') : '';
@@ -462,7 +463,7 @@ class MediaPage extends \Page
 
         $parent = $this->getParent();
         if(!$parent) {
-            return null;
+            return '';
         }
 
         $date = ($parent->URLFormatting !== '-') ? $this->dbObject('Date')->Format($parent->URLFormatting ?: 'y/MM/dd/') : '';
@@ -476,11 +477,9 @@ class MediaPage extends \Page
 
     /**
      *  Retrieve the versioned attribute join records, since these are what we're editing.
-     *
-     *  @return media page attribute
      */
 
-    public function MediaPageAttributes()
+    public function MediaPageAttributes(): DataList
     {
 
         return MediaPageAttribute::get()->filter('MediaPageID', $this->ID);
@@ -490,10 +489,9 @@ class MediaPage extends \Page
      *  Retrieve a specific attribute for use in templates.
      *
      *  @parameter <{ATTRIBUTE}> string
-     *  @return media attribute
      */
 
-    public function getAttribute($title)
+    public function getAttribute(string $title): MediaAttribute
     {
 
         return $this->MediaAttributes()->filter('OriginalTitle', $title)->first();
@@ -503,10 +501,9 @@ class MediaPage extends \Page
      *  Retrieve a specific attribute for use in templates.
      *
      *  @parameter <{ATTRIBUTE}> string
-     *  @return media attribute
      */
 
-    public function Attribute($title)
+    public function Attribute(string $title): MediaAttribute
     {
 
         // This provides consistency when it comes to defining parameters from the template.
