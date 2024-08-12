@@ -7,6 +7,7 @@ use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Forms\GridField\GridFieldConfig_RecordEditor;
 use SilverStripe\Forms\GridField\GridFieldDeleteAction;
 use SilverStripe\Forms\ReadonlyField;
+use SilverStripe\ORM\DataList;
 
 /**
  *	Displays media holder/page children, with optional date/tag filters.
@@ -111,11 +112,9 @@ class MediaHolder extends \Page
 
     /**
      *	Retrieve any `MediaHolder` children of this `MediaHolder`.
-     *
-     *	@return data list
      */
 
-    public function getMediaHolderChildren()
+    public function getMediaHolderChildren(): DataList
     {
 
         return $this->AllChildren()->filter('ClassName', MediaHolder::class);
@@ -123,11 +122,9 @@ class MediaHolder extends \Page
 
     /**
      *	Retrieve any `MediaPage` children of this `MediaHolder`.
-     *
-     *	@return data list
      */
 
-    public function getMediaPageChildren()
+    public function getMediaPageChildren(): DataList
     {
 
         return $this->AllChildren()->filter('ClassName', MediaPage::class);
