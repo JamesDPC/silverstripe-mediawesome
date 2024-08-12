@@ -64,11 +64,14 @@ class MediaHolder extends \Page
             'y/' => 'year/media',
             '-' => 'media'
         ];
-        $fields->insertBefore(DropdownField::create(
-            'URLFormatting',
-            'URL Formatting',
-            $formats
-        )->setDescription('The <strong>media</strong> URL format'), 'Content');
+        $fields->insertBefore(
+            'Content',
+            DropdownField::create(
+                'URLFormatting',
+                'URL Formatting',
+                $formats
+            )->setDescription('The <strong>media</strong> URL format')
+        );
 
         // Allow customisation of media types, depending on the current CMS user permissions.
 
