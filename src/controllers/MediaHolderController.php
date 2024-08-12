@@ -202,7 +202,7 @@ class MediaHolderController extends \PageController
             // Determine whether a media page child once existed, and redirect appropriately.
 
             $response = $this->resolveURL();
-            if($response) {
+            if($response instanceof \SilverStripe\Control\HTTPResponse) {
 
                 // The current request URL has been successfully parsed.
 
@@ -262,6 +262,7 @@ class MediaHolderController extends \PageController
                     foreach($segments as $previous) {
                         $date[] = str_pad($previous, 2, '0', STR_PAD_LEFT);
                     }
+
                     $children = $children->filter([
                         'Date:StartsWith' => implode('-', $date)
                     ]);
@@ -272,7 +273,7 @@ class MediaHolderController extends \PageController
 
                     if(is_null($child)) {
                         $response = $this->resolveURL();
-                        if($response) {
+                        if($response instanceof \SilverStripe\Control\HTTPResponse) {
 
                             // The current request URL has been successfully parsed.
 

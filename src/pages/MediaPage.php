@@ -448,6 +448,7 @@ class MediaPage extends \Page
         if($action && is_string($action)) {
             $join[] = "{$action}/";
         }
+
         return Controller::join_links($join);
     }
 
