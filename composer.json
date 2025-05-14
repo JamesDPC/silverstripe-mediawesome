@@ -21,8 +21,17 @@
         "silverstripe/framework": "^5"
     },
     "require-dev": {
-        "phpunit/phpunit": "^9.5"
+        "cambis/silverstripe-rector": "^1",
+        "cambis/silverstan": "^1",
+        "phpunit/phpunit": "^9.5",
+        "nswdpc/ci-files": "dev-v-3"
     },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/nswdpc/ci-files.git"
+        }
+    ],
     "autoload": {
         "psr-4": {
             "nglasl\\mediawesome\\": [
@@ -41,5 +50,11 @@
         "expose": [
             "client"
         ]
+    },
+    "config": {
+        "allow-plugins": {
+            "composer/installers": true,
+            "silverstripe/vendor-plugin": true
+        }
     }
 }
