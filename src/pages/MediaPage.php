@@ -492,7 +492,7 @@ class MediaPage extends \Page
      *  @parameter <{ATTRIBUTE}> string
      */
 
-    public function getAttribute(string $title): MediaAttribute
+    public function getAttribute(string $title): ?MediaAttribute
     {
 
         return $this->MediaAttributes()->filter('OriginalTitle', $title)->first();
@@ -504,7 +504,7 @@ class MediaPage extends \Page
      *  @parameter <{ATTRIBUTE}> string
      */
 
-    public function Attribute(string $title): MediaAttribute
+    public function Attribute(string $title): ?MediaAttribute
     {
 
         // This provides consistency when it comes to defining parameters from the template.
