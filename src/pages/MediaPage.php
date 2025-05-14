@@ -195,7 +195,7 @@ class MediaPage extends \Page
 
         // Instantiate the default media types and their respective attributes.
 
-        foreach ($this->config()->type_defaults as $name => $attributes) {
+        foreach (static::config()->get('type_defaults') as $name => $attributes) {
 
             // Confirm that the media type doesn't already exist before creating it.
 
