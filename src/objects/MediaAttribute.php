@@ -72,9 +72,14 @@ class MediaAttribute extends DataObject
 
         // Determine whether this is user created.
 
-        $config = MediaPage::config();
-        $type = $this->MediaType()->Title;
-        return !isset($config->type_defaults[$type]) || !in_array($this->OriginalTitle, $config->type_defaults[$type]);
+        $typeDefaults = MediaPage::config()->get('type_defaults');
+        $mediaType = $this->MediaType();
+        $title = $mediaType && $mediaType->isInDB() ? trim($mediaType->Title ?? '') : '';
+        if($title !== '') {
+            return !isset($typeDefaults[$title]) || !in_array($this->OriginalTitle, $typeDefaults[$title]);
+        } else {
+            return false;
+        }
     }
 
     /**

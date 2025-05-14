@@ -84,6 +84,8 @@ class MediaPage extends \Page
 
     private static bool $can_be_root = false;
 
+    // this value can be either a string or an array
+    // @phpstan-ignore silverstan.configurationProperty
     private static string|array $allowed_children = 'none';
 
     private static string $default_parent = MediaHolder::class;
@@ -246,11 +248,12 @@ class MediaPage extends \Page
         $fields = parent::getCMSFields();
 
         // Display the media type as read only.
-
+        $mediaType = $this->MediaType();
+        $mediaTypeTitle = $mediaType ? trim(($mediaType->Title ?? '')) : '';
         $fields->addFieldToTab('Root.Main', ReadonlyField::create(
             'Type',
             'Type',
-            $this->MediaType()->Title
+            $mediaTypeTitle
         ), 'Title');
 
         // Display a notification that the parent holder contains mixed children.
@@ -260,7 +263,7 @@ class MediaPage extends \Page
             Requirements::css('nglasl/silverstripe-mediawesome: client/css/mediawesome.css');
             $fields->addFieldToTab('Root.Main', LiteralField::create(
                 'MediaNotification',
-                "<p class='mediawesome notification'><strong>Mixed {$this->MediaType()->Title} Holder</strong></p>"
+                "<p class='mediawesome notification'><strong>Mixed {$mediaTypeTitle} Holder</strong></p>"
             ), 'Type');
         }
 
@@ -303,14 +306,14 @@ class MediaPage extends \Page
 
         $fields->addFieldToTab('Root.Main', GridField::create(
             'MediaPageAttributes',
-            "{$this->MediaType()->Title} Attributes",
+            "{$mediaTypeTitle} Attributes",
             $this->MediaPageAttributes(),
             GridFieldConfig_RecordEditor::create()->removeComponentsByType(GridFieldAddNewButton::class)
         )->addExtraClass('pb-2'), 'Content');
 
         // Allow customisation of images and attachments.
 
-        $type = strtolower($this->MediaType()->Title);
+        $type = strtolower($mediaTypeTitle);
         $fields->findOrMakeTab('Root.ImagesAttachments', 'Images and Attachments');
         $fields->addFieldToTab('Root.ImagesAttachments', $images = Injector::inst()->create(
             FileHandleField::class,
@@ -432,8 +435,9 @@ class MediaPage extends \Page
         if (Versioned::get_stage() === 'Stage') {
 
             // The attributes of the respective type need to appear on this page.
-
-            foreach ($this->MediaType()->MediaAttributes() as $attribute) {
+            $mediaType = $this->MediaType();
+            $mediaTypeAttributes = $mediaType ? $mediaType->MediaAttributes() : [];
+            foreach ($mediaTypeAttributes as $attribute) {
                 $this->MediaAttributes()->add($attribute);
             }
         }
@@ -510,7 +514,7 @@ class MediaPage extends \Page
 
     public function getAttribute(string $title): ?MediaAttribute
     {
-
+        // @phpstan-ignore return.type
         return $this->MediaAttributes()->filter('OriginalTitle', $title)->first();
     }
 

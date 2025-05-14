@@ -44,8 +44,8 @@ class MediaPageAttribute extends DataObject
     #[\Override]
     public function getTitle()
     {
-
-        return $this->MediaAttribute()->Title;
+        $mediaAttribute = $this->MediaAttribute();
+        return $mediaAttribute && $mediaAttribute->isInDB() ? $mediaAttribute->Title : null;
     }
 
     #[\Override]
