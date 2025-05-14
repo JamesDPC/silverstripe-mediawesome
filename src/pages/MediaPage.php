@@ -75,7 +75,7 @@ class MediaPage extends \Page
 
     private static bool $can_be_root = false;
 
-    private static string $allowed_children = 'none';
+    private static string|array $allowed_children = 'none';
 
     private static string $default_parent = MediaHolder::class;
 
