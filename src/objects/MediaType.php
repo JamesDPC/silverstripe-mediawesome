@@ -78,7 +78,7 @@ class MediaType extends DataObject
     {
 
         $fields = parent::getCMSFields();
-        if($this->Title) {
+        if ($this->Title) {
 
             // Display the title as read only.
 
@@ -115,9 +115,9 @@ class MediaType extends DataObject
 
         // Confirm that the current type has been given a title and doesn't already exist.
 
-        if($result->isValid() && !$this->Title) {
+        if ($result->isValid() && !$this->Title) {
             $result->addError('"Title" required!');
-        } elseif($result->isValid() && MediaType::get_one(MediaType::class, [
+        } elseif ($result->isValid() && MediaType::get_one(MediaType::class, [
             'ID != ?' => $this->ID,
             'Title = ?' => $this->Title
         ])) {

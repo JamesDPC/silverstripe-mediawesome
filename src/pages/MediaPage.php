@@ -96,11 +96,11 @@ class MediaPage extends \Page
 
         // Determine whether this requires an SS3 to SS4 migration.
 
-        if(MediaAttribute::get()->filter('MediaTypeID', 0)->exists()) {
+        if (MediaAttribute::get()->filter('MediaTypeID', 0)->exists()) {
 
             // The problem is that class name mapping happens after this, but we need it right now to query pages.
 
-            foreach([
+            foreach ([
                 'SiteTree',
                 'SiteTree_Live',
                 'SiteTree_Versions'
@@ -126,7 +126,7 @@ class MediaPage extends \Page
                 ['LinkID' => 'ASC']
             );
             $attributes = $attributes->execute();
-            if($attributes) {
+            if ($attributes) {
 
                 // With the results from above, delete these to prevent data integrity issues.
 
@@ -138,16 +138,16 @@ class MediaPage extends \Page
 
                 // Migrate the existing media attributes.
 
-                foreach($attributes as $existing) {
+                foreach ($attributes as $existing) {
                     $page = MediaPage::get()->byID($existing['MediaPageID']);
-                    if(!$page) {
+                    if (!$page) {
 
                         // This page may no longer exist.
 
                         continue;
                     }
 
-                    if($existing['LinkID'] == -1) {
+                    if ($existing['LinkID'] == -1) {
 
                         // Instantiate a new attribute for each "master" attribute.
 
@@ -171,7 +171,7 @@ class MediaPage extends \Page
 
                     // The attributes are versioned, but should only be published when it's considered safe to do so.
 
-                    if($page->isPublished() && !$page->isModifiedOnDraft()) {
+                    if ($page->isPublished() && !$page->isModifiedOnDraft()) {
                         $page->publishRecursive();
                     }
                 }
@@ -184,7 +184,7 @@ class MediaPage extends \Page
             'MediaType.Title' => 'Event',
             'OriginalTitle' => 'Start Time'
         ]);
-        foreach($attributes as $attribute) {
+        foreach ($attributes as $attribute) {
 
             // These should now be "time" attributes.
 
@@ -195,26 +195,26 @@ class MediaPage extends \Page
 
         // Instantiate the default media types and their respective attributes.
 
-        foreach($this->config()->type_defaults as $name => $attributes) {
+        foreach ($this->config()->type_defaults as $name => $attributes) {
 
             // Confirm that the media type doesn't already exist before creating it.
 
             $type = MediaType::get()->filter([
                 'Title' => $name
             ])->first();
-            if(!$type) {
+            if (!$type) {
                 $type = MediaType::create();
                 $type->Title = $name;
                 $type->write();
                 DB::alteration_message("\"{$name}\" Media Type", 'created');
             }
 
-            if(is_array($attributes)) {
-                foreach($attributes as $attribute) {
+            if (is_array($attributes)) {
+                foreach ($attributes as $attribute) {
 
                     // Confirm that the media attributes don't already exist before creating them.
 
-                    if(!MediaAttribute::get()->filter([
+                    if (!MediaAttribute::get()->filter([
                         'MediaTypeID' => $type->ID,
                         'OriginalTitle' => $attribute
                     ])->first()) {
@@ -245,7 +245,7 @@ class MediaPage extends \Page
         // Display a notification that the parent holder contains mixed children.
         /** @var MediaHolder $parent **/
         $parent = $this->getParent();
-        if($parent && $parent->getMediaHolderChildren()->exists()) {
+        if ($parent && $parent->getMediaHolderChildren()->exists()) {
             Requirements::css('nglasl/silverstripe-mediawesome: client/css/mediawesome.css');
             $fields->addFieldToTab('Root.Main', LiteralField::create(
                 'MediaNotification',
@@ -276,7 +276,7 @@ class MediaPage extends \Page
             'Tags',
             $tags
         ));
-        if(!$tags) {
+        if (!$tags) {
             $categoriesList->setAttribute('disabled', 'true');
             $tagsList->setAttribute('disabled', 'true');
         }
@@ -331,13 +331,13 @@ class MediaPage extends \Page
 
         // The URL segment will conflict with a year/month/day/media format when numeric.
 
-        if(is_numeric($this->URLSegment) || !($parent instanceof MediaHolder) || ($this->MediaTypeID && ($parent->MediaTypeID != $this->MediaTypeID))) {
+        if (is_numeric($this->URLSegment) || !($parent instanceof MediaHolder) || ($this->MediaTypeID && ($parent->MediaTypeID != $this->MediaTypeID))) {
 
             // Customise a validation error message.
 
-            if(is_numeric($this->URLSegment)) {
+            if (is_numeric($this->URLSegment)) {
                 $message = '"URL Segment" must not be numeric!';
-            } elseif(!($parent instanceof MediaHolder)) {
+            } elseif (!($parent instanceof MediaHolder)) {
                 $message = 'The parent needs to be a published media holder!';
             } else {
                 $message = "The media holder type doesn't match this!";
@@ -362,13 +362,13 @@ class MediaPage extends \Page
 
         // Set the default media page date.
 
-        if(!$this->Date) {
+        if (!$this->Date) {
             $this->Date = date('Y-m-d');
         }
 
         // Confirm that the external link exists.
 
-        if($this->ExternalLink) {
+        if ($this->ExternalLink) {
             // The following code was taken from RedirectorPage::onBeforeWrite()
             // on SilverStripe 4.1.1
             if ($this->ExternalLink &&
@@ -392,7 +392,7 @@ class MediaPage extends \Page
             }
 
             $file_headers = @get_headers($this->ExternalLink);
-            if($file_headers === [] || $file_headers === false || strripos((string) $file_headers[0], '404 Not Found')) {
+            if ($file_headers === [] || $file_headers === false || strripos((string) $file_headers[0], '404 Not Found')) {
                 $this->ExternalLink = null;
             }
         }
@@ -400,9 +400,9 @@ class MediaPage extends \Page
         // Apply the parent holder media type.
         /** @var MediaHolder $parent **/
         $parent = $this->getParent();
-        if($parent) {
+        if ($parent) {
             $type = $parent->MediaType();
-            if($type->exists()) {
+            if ($type->exists()) {
                 $this->MediaTypeID = $type->ID;
             }
         }
@@ -415,11 +415,11 @@ class MediaPage extends \Page
 
         // This triggers for both a save and publish, causing duplicate attributes to appear.
 
-        if(Versioned::get_stage() === 'Stage') {
+        if (Versioned::get_stage() === 'Stage') {
 
             // The attributes of the respective type need to appear on this page.
 
-            foreach($this->MediaType()->MediaAttributes() as $attribute) {
+            foreach ($this->MediaType()->MediaAttributes() as $attribute) {
                 $this->MediaAttributes()->add($attribute);
             }
         }
@@ -431,12 +431,12 @@ class MediaPage extends \Page
 
     public function Link($action = null)
     {
-        if($this->ExternalLink) {
+        if ($this->ExternalLink) {
             return $this->ExternalLink;
         }
 
         $parent = $this->getParent();
-        if(!$parent) {
+        if (!$parent) {
             return '';
         }
 
@@ -445,7 +445,7 @@ class MediaPage extends \Page
             $parent->Link(),
             "{$date}{$this->URLSegment}/"
         ];
-        if($action && is_string($action)) {
+        if ($action && is_string($action)) {
             $join[] = "{$action}/";
         }
 
@@ -458,18 +458,18 @@ class MediaPage extends \Page
 
     public function AbsoluteLink($action = null)
     {
-        if($this->ExternalLink) {
+        if ($this->ExternalLink) {
             return $this->ExternalLink;
         }
 
         $parent = $this->getParent();
-        if(!$parent) {
+        if (!$parent) {
             return '';
         }
 
         $date = ($parent->URLFormatting !== '-') ? $this->dbObject('Date')->Format($parent->URLFormatting ?: 'y/MM/dd/') : '';
         $link = $parent->AbsoluteLink() . "{$date}{$this->URLSegment}/";
-        if($action && is_string($action)) {
+        if ($action && is_string($action)) {
             $link .= "{$action}/";
         }
 

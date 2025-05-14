@@ -37,7 +37,7 @@ class SiteConfigMediaPermissionExtension extends DataExtension
 
         // Confirm that the current CMS user has permission.
 
-        if(Permission::check('EDIT_SITECONFIG') === false) {
+        if (Permission::check('EDIT_SITECONFIG') === false) {
             $fields->addFieldToTab('Root.Access', $options = ReadonlyField::create(
                 'Media',
                 'Who can customise media?',

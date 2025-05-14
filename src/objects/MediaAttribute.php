@@ -53,9 +53,9 @@ class MediaAttribute extends DataObject
         // Determine whether this is being used.
 
         $current = Versioned::get_stage();
-        foreach(singleton(Versioned::class)->getVersionedStages() as $stage) {
+        foreach (singleton(Versioned::class)->getVersionedStages() as $stage) {
             Versioned::set_stage($stage);
-            if($this->MediaPages()->exists() && $this->MediaPages()->where('MediaPageAttribute.Content IS NOT NULL')->exists()) {
+            if ($this->MediaPages()->exists() && $this->MediaPages()->where('MediaPageAttribute.Content IS NOT NULL')->exists()) {
                 return false;
             }
         }
@@ -110,7 +110,7 @@ class MediaAttribute extends DataObject
 
         // Confirm that the current attribute has been given a title.
 
-        if($result->isValid() && !$this->Title) {
+        if ($result->isValid() && !$this->Title) {
             $result->addError('"Title" required!');
         }
 
@@ -127,7 +127,7 @@ class MediaAttribute extends DataObject
 
         // Set the original title of the current attribute for use in templates.
 
-        if(!$this->OriginalTitle) {
+        if (!$this->OriginalTitle) {
             $this->OriginalTitle = $this->Title;
         }
     }
@@ -139,7 +139,7 @@ class MediaAttribute extends DataObject
 
         // This needs to appear on media pages of the respective type.
 
-        foreach(MediaPage::get()->filter('MediaTypeID', $this->MediaTypeID) as $page) {
+        foreach (MediaPage::get()->filter('MediaTypeID', $this->MediaTypeID) as $page) {
             $page->MediaAttributes()->add($this);
         }
     }
@@ -152,7 +152,7 @@ class MediaAttribute extends DataObject
         // Clean up the pages associated with this.
 
         $current = Versioned::get_stage();
-        foreach(singleton(Versioned::class)->getVersionedStages() as $stage) {
+        foreach (singleton(Versioned::class)->getVersionedStages() as $stage) {
             Versioned::set_stage($stage);
             MediaPageAttribute::get()->filter('MediaAttributeID', $this->ID)->removeAll();
         }

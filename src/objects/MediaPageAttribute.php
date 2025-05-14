@@ -50,7 +50,7 @@ class MediaPageAttribute extends DataObject
 
         // Determine the field type.
 
-        if(strrpos($this->getTitle(), 'Date')) {
+        if (strrpos($this->getTitle(), 'Date')) {
 
             // The user expects this to be a date attribute.
 

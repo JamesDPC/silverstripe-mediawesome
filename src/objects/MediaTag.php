@@ -54,9 +54,9 @@ class MediaTag extends DataObject
 
         // Confirm that the current tag has been given a title and doesn't already exist.
 
-        if($result->isValid() && !$this->Title) {
+        if ($result->isValid() && !$this->Title) {
             $result->addError('"Title" required!');
-        } elseif($result->isValid() && MediaTag::get_one(MediaTag::class, [
+        } elseif ($result->isValid() && MediaTag::get_one(MediaTag::class, [
             'ID != ?' => $this->ID,
             'Title = ?' => $this->Title
         ])) {

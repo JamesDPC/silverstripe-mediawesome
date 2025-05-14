@@ -107,7 +107,7 @@ class MediaHolder extends \Page
 
         // Apply the first media type by default.
 
-        if(!$this->MediaTypeID) {
+        if (!$this->MediaTypeID) {
             $existing = MediaType::get()->first();
             $this->MediaTypeID = $existing->ID;
         }
