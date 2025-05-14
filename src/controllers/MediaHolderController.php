@@ -68,7 +68,8 @@ class MediaHolderController extends \PageController
         // Retrieve custom request filters.
 
         $request = $this->getRequest();
-        if ($limitVar = $request->getVar('limit')) {
+        $limitVar = (int)$request->getVar('limit');
+        if($limitVar > 0) {
             $limit = ($limitVar > 100) ? 100 : $limitVar;
         }
 
