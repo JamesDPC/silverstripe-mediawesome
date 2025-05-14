@@ -3,6 +3,7 @@
 namespace nglasl\mediawesome;
 
 use SilverStripe\CMS\Controllers\ModelAsController;
+use SilverStripe\CMS\Controllers\OldPageRedirector;
 use SilverStripe\Control\HTTP;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
@@ -358,7 +359,7 @@ class MediaHolderController extends \PageController
 
         // Determine whether a media page child once existed.
 
-        $resolution = self::find_old_page([
+        $resolution = OldPageRedirector::find_old_page([
             $holder,
             $page
         ]);
