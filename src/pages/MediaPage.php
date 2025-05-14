@@ -28,8 +28,17 @@ use SilverStripe\View\Requirements;
 /**
  *  Displays customised media content relating to the respective media type.
  *  @author Nathan Glasl <nathan@symbiote.com.au>
+ * @property ?string $ExternalLink
+ * @property ?string $Abstract
+ * @property ?string $Date
+ * @property int $MediaTypeID
+ * @method \nglasl\mediawesome\MediaType MediaType()
+ * @method \SilverStripe\ORM\ManyManyThroughList<\nglasl\mediawesome\MediaPageAttribute> MediaAttributes()
+ * @method \SilverStripe\ORM\ManyManyList<\SilverStripe\Assets\Image> Images()
+ * @method \SilverStripe\ORM\ManyManyList<\SilverStripe\Assets\File> Attachments()
+ * @method \SilverStripe\ORM\ManyManyList<\nglasl\mediawesome\MediaTag> Categories()
+ * @method \SilverStripe\ORM\ManyManyList<\nglasl\mediawesome\MediaTag> Tags()
  */
-
 class MediaPage extends \Page
 {
     private static string $table_name = 'MediaPage';
@@ -89,6 +98,7 @@ class MediaPage extends \Page
 
     private static array $type_defaults = [];
 
+    #[\Override]
     public function requireDefaultRecords()
     {
 
@@ -229,6 +239,7 @@ class MediaPage extends \Page
         }
     }
 
+    #[\Override]
     public function getCMSFields()
     {
 
@@ -324,6 +335,7 @@ class MediaPage extends \Page
      *  Confirm that the current page is valid.
      */
 
+    #[\Override]
     public function validate()
     {
 
@@ -355,6 +367,7 @@ class MediaPage extends \Page
         return parent::validate();
     }
 
+    #[\Override]
     public function onBeforeWrite()
     {
 
@@ -408,6 +421,7 @@ class MediaPage extends \Page
         }
     }
 
+    #[\Override]
     public function onAfterWrite()
     {
 
@@ -429,6 +443,7 @@ class MediaPage extends \Page
      *  Determine the URL by using the media holder's defined URL format.
      */
 
+    #[\Override]
     public function Link($action = null)
     {
         if ($this->ExternalLink) {
@@ -456,6 +471,7 @@ class MediaPage extends \Page
      *  Determine the absolute URL by using the media holder's defined URL format.
      */
 
+    #[\Override]
     public function AbsoluteLink($action = null)
     {
         if ($this->ExternalLink) {

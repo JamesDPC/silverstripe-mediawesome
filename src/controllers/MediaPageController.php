@@ -4,8 +4,8 @@ namespace nglasl\mediawesome;
 
 /**
  *  @author Nathan Glasl <nathan@symbiote.com.au>
+ * @extends \PageController<\nglasl\mediawesome\MediaPage>
  */
-
 class MediaPageController extends \PageController
 {
     /**

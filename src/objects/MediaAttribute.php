@@ -10,8 +10,12 @@ use SilverStripe\Versioned\Versioned;
 /**
  *	This is a CMS attribute for a media type.
  *	@author Nathan Glasl <nathan@symbiote.com.au>
+ * @property string $Title
+ * @property ?string $OriginalTitle
+ * @property int $MediaTypeID
+ * @method \nglasl\mediawesome\MediaType MediaType()
+ * @method \SilverStripe\ORM\ManyManyList<\nglasl\mediawesome\MediaPage> MediaPages()
  */
-
 class MediaAttribute extends DataObject
 {
     private static string $table_name = 'MediaAttribute';
@@ -29,24 +33,28 @@ class MediaAttribute extends DataObject
         'MediaPages' => MediaPage::class . '.MediaAttributes'
     ];
 
+    #[\Override]
     public function canView($member = null)
     {
 
         return true;
     }
 
+    #[\Override]
     public function canEdit($member = null)
     {
 
         return $this->checkPermissions($member);
     }
 
+    #[\Override]
     public function canCreate($member = null, $context = [])
     {
 
         return $this->checkPermissions($member);
     }
 
+    #[\Override]
     public function canDelete($member = null)
     {
 
@@ -85,6 +93,7 @@ class MediaAttribute extends DataObject
         return Permission::check($configuration->MediaPermission, 'any', $member);
     }
 
+    #[\Override]
     public function getCMSFields()
     {
 
@@ -103,6 +112,7 @@ class MediaAttribute extends DataObject
      *	Confirm that the current attribute is valid.
      */
 
+    #[\Override]
     public function validate()
     {
 
@@ -120,6 +130,7 @@ class MediaAttribute extends DataObject
         return $result;
     }
 
+    #[\Override]
     public function onBeforeWrite()
     {
 
@@ -132,6 +143,7 @@ class MediaAttribute extends DataObject
         }
     }
 
+    #[\Override]
     public function onAfterWrite()
     {
 
@@ -144,6 +156,7 @@ class MediaAttribute extends DataObject
         }
     }
 
+    #[\Override]
     public function onAfterDelete()
     {
 

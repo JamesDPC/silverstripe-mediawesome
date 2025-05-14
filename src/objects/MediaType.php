@@ -13,8 +13,9 @@ use SilverStripe\SiteConfig\SiteConfig;
 /**
  *	This is a CMS type/category of media.
  *	@author Nathan Glasl <nathan@symbiote.com.au>
+ * @property string $Title
+ * @method \SilverStripe\ORM\HasManyList<\nglasl\mediawesome\MediaAttribute> MediaAttributes()
  */
-
 class MediaType extends DataObject
 {
     private static string $table_name = 'MediaType';
@@ -29,24 +30,28 @@ class MediaType extends DataObject
 
     private static string $default_sort = 'Title';
 
+    #[\Override]
     public function canView($member = null)
     {
 
         return true;
     }
 
+    #[\Override]
     public function canEdit($member = null)
     {
 
         return true;
     }
 
+    #[\Override]
     public function canCreate($member = null, $context = [])
     {
 
         return $this->checkPermissions($member);
     }
 
+    #[\Override]
     public function canDelete($member = null)
     {
 
@@ -74,6 +79,7 @@ class MediaType extends DataObject
         return Permission::check($configuration->MediaPermission, 'any', $member);
     }
 
+    #[\Override]
     public function getCMSFields()
     {
 
@@ -108,6 +114,7 @@ class MediaType extends DataObject
      *	Confirm that the current type is valid.
      */
 
+    #[\Override]
     public function validate()
     {
 

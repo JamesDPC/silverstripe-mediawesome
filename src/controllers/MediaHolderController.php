@@ -19,8 +19,8 @@ use SilverStripe\ORM\PaginatedList;
 
 /**
  *	@author Nathan Glasl <nathan@symbiote.com.au>
+ * @extends \PageController<\nglasl\mediawesome\MediaHolder>
  */
-
 class MediaHolderController extends \PageController
 {
     private static array $allowed_actions = [
