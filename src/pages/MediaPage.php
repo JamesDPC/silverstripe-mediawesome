@@ -444,56 +444,66 @@ class MediaPage extends \Page
     }
 
     /**
-     *  Determine the URL by using the media holder's defined URL format.
+     * Retrieve the formated prefix for the page link, based on this page's parent URLFormatting value
+     * If there is no parent, or if the URLFormatting is not set, the prefix is not returned
      */
-
-    #[\Override]
-    public function Link($action = null)
-    {
-        if ($this->ExternalLink) {
-            return $this->ExternalLink;
-        }
-
+    public function getUrlFormattingPrefix(?string $action = null): string {
         $parent = $this->getParent();
-        if (!$parent) {
+        if (!$parent || !$parent->isInDB()) {
             return '';
         }
 
-        $date = ($parent->URLFormatting !== '-') ? $this->dbObject('Date')->Format($parent->URLFormatting ?: 'y/MM/dd/') : '';
-        $join = [
-            $parent->Link(),
-            "{$date}{$this->URLSegment}/"
-        ];
-        if ($action && is_string($action)) {
-            $join[] = "{$action}/";
+        // remove the trailing / from the formatting value, defined in the enum
+        $format = trim(rtrim((string)$parent->URLFormatting, '/'));
+        if($format !== '-') {
+            // all current formats are date formats
+            return $this->dbObject('Date')->Format($format);
+        } else {
+            return '';
         }
-
-        return Controller::join_links($join);
     }
 
     /**
-     *  Determine the absolute URL by using the media holder's defined URL format.
+     * Return the external link value for this page, validated
      */
+    public function getExternalLink(): string
+    {
+        $externalLink = trim($this->getField('ExternalLink') ?? '');
+        if ($externalLink !== '' && filter_var($externalLink, FILTER_VALIDATE_URL) !== false) {
+            return $externalLink;
+        } else {
+            return '';
+        }
+    }
 
+    /**
+     * Determine the Link by using the media holder's defined URL format.
+     * If an external link is set, this is returned
+     */
+    #[\Override]
+    public function Link($action = null)
+    {
+        $externaLink = $this->getExternalLink();
+        if($externaLink !== '') {
+            return $externaLink;
+        } else {
+            // call parent::Link, which itself calls RelativeLink()
+            return parent::Link($action);
+        }
+    }
+
+    /**
+     *  If the page has an external link supplied, return that as the alternate absolute link
+     */
     #[\Override]
     public function AbsoluteLink($action = null)
     {
-        if ($this->ExternalLink) {
-            return $this->ExternalLink;
+        $externaLink = $this->getExternalLink();
+        if($externaLink !== '') {
+            return $externaLink;
+        } else {
+            return parent::AbsoluteLink($action);
         }
-
-        $parent = $this->getParent();
-        if (!$parent) {
-            return '';
-        }
-
-        $date = ($parent->URLFormatting !== '-') ? $this->dbObject('Date')->Format($parent->URLFormatting ?: 'y/MM/dd/') : '';
-        $link = $parent->AbsoluteLink() . "{$date}{$this->URLSegment}/";
-        if ($action && is_string($action)) {
-            $link .= "{$action}/";
-        }
-
-        return $link;
     }
 
     /**
