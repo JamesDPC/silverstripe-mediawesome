@@ -485,9 +485,9 @@ class MediaPage extends \Page
     #[\Override]
     public function Link($action = null)
     {
-        $externaLink = $this->getExternalLink();
-        if ($externaLink !== '') {
-            return $externaLink;
+        $externalLink = $this->getExternalLink();
+        if ($externalLink !== '') {
+            return $externalLink;
         } else {
             // call parent::Link, which itself calls RelativeLink()
             return parent::Link($action);
@@ -500,9 +500,9 @@ class MediaPage extends \Page
     #[\Override]
     public function AbsoluteLink($action = null)
     {
-        $externaLink = $this->getExternalLink();
-        if ($externaLink !== '') {
-            return $externaLink;
+        $externalLink = $this->getExternalLink();
+        if ($externalLink !== '') {
+            return $externalLink;
         } else {
             return parent::AbsoluteLink($action);
         }
