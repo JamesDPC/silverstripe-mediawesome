@@ -28,7 +28,7 @@ use SilverStripe\View\Requirements;
 /**
  *  Displays customised media content relating to the respective media type.
  *  @author Nathan Glasl <nathan@symbiote.com.au>
- * @property ?string $ExternalLink
+ * @property string $ExternalLink
  * @property ?string $Abstract
  * @property ?string $Date
  * @property int $MediaTypeID
@@ -38,6 +38,7 @@ use SilverStripe\View\Requirements;
  * @method \SilverStripe\ORM\ManyManyList<\SilverStripe\Assets\File> Attachments()
  * @method \SilverStripe\ORM\ManyManyList<\nglasl\mediawesome\MediaTag> Categories()
  * @method \SilverStripe\ORM\ManyManyList<\nglasl\mediawesome\MediaTag> Tags()
+ * @mixin \nglasl\mediawesome\MediaPageLinkExtension
  */
 class MediaPage extends \Page
 {

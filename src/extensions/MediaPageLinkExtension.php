@@ -7,6 +7,7 @@ use SilverStripe\Core\Extension;
 /**
  * Provide link handling for nglasl\mediawesome\MediaPage
  * @extends \SilverStripe\ORM\Extension
+ * @extends \SilverStripe\Core\Extension<(\nglasl\mediawesome\MediaPage & static)>
  */
 class MediaPageLinkExtension extends Extension
 {
