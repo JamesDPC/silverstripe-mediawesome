@@ -70,7 +70,7 @@ class MediaHolderController extends \PageController
 
         $request = $this->getRequest();
         $limitVar = (int)$request->getVar('limit');
-        if($limitVar > 0) {
+        if ($limitVar > 0) {
             $limit = ($limitVar > 100) ? 100 : $limitVar;
         }
 

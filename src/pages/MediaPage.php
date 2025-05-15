@@ -447,7 +447,8 @@ class MediaPage extends \Page
      * Retrieve the formated prefix for the page link, based on this page's parent URLFormatting value
      * If there is no parent, or if the URLFormatting is not set, the prefix is not returned
      */
-    public function getUrlFormattingPrefix(?string $action = null): string {
+    public function getUrlFormattingPrefix(?string $action = null): string
+    {
         $parent = $this->getParent();
         if (!$parent || !$parent->isInDB()) {
             return '';
@@ -455,7 +456,7 @@ class MediaPage extends \Page
 
         // remove the trailing / from the formatting value, defined in the enum
         $format = trim(rtrim((string)$parent->URLFormatting, '/'));
-        if($format !== '-') {
+        if ($format !== '-') {
             // all current formats are date formats
             return $this->dbObject('Date')->Format($format);
         } else {
@@ -484,7 +485,7 @@ class MediaPage extends \Page
     public function Link($action = null)
     {
         $externaLink = $this->getExternalLink();
-        if($externaLink !== '') {
+        if ($externaLink !== '') {
             return $externaLink;
         } else {
             // call parent::Link, which itself calls RelativeLink()
@@ -499,7 +500,7 @@ class MediaPage extends \Page
     public function AbsoluteLink($action = null)
     {
         $externaLink = $this->getExternalLink();
-        if($externaLink !== '') {
+        if ($externaLink !== '') {
             return $externaLink;
         } else {
             return parent::AbsoluteLink($action);

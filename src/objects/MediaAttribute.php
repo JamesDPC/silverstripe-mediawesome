@@ -75,7 +75,7 @@ class MediaAttribute extends DataObject
         $typeDefaults = MediaPage::config()->get('type_defaults');
         $mediaType = $this->MediaType();
         $title = $mediaType && $mediaType->isInDB() ? trim($mediaType->Title ?? '') : '';
-        if($title !== '') {
+        if ($title !== '') {
             return !isset($typeDefaults[$title]) || !in_array($this->OriginalTitle, $typeDefaults[$title]);
         } else {
             return false;

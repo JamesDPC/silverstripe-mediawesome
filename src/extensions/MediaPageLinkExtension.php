@@ -10,10 +10,11 @@ use SilverStripe\Core\Extension;
  */
 class MediaPageLinkExtension extends Extension
 {
-    public function updateRelativeLink(string &$link, ?string $base = null, ?string $action = null) {
+    public function updateRelativeLink(string &$link, ?string $base = null, ?string $action = null)
+    {
         $mediaPage = $this->getOwner();
         $urlFormattingPrefix = $mediaPage->getUrlFormattingPrefix();
-        if($urlFormattingPrefix !== '') {
+        if ($urlFormattingPrefix !== '') {
             $parts = explode("/", $link);
             $last = array_pop($parts);
             $parts[] = $urlFormattingPrefix;
