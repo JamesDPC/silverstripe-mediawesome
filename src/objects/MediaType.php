@@ -137,4 +137,11 @@ class MediaType extends DataObject
         return $result;
     }
 
+    #[\Override]
+    public function onBeforeWrite()
+    {
+        parent::onBeforeWrite();
+        $this->Title = strip_tags($this->Title ?? '');
+    }
+
 }

@@ -250,7 +250,7 @@ class MediaPage extends \Page
 
         // Display the media type as read only.
         $mediaType = $this->MediaType();
-        $mediaTypeTitle = $mediaType ? trim(($mediaType->Title ?? '')) : '';
+        $mediaTypeTitle = $mediaType ? strip_tags(trim($mediaType->Title ?? '')) : '';
         $fields->addFieldToTab('Root.Main', ReadonlyField::create(
             'Type',
             'Type',
@@ -264,7 +264,7 @@ class MediaPage extends \Page
             Requirements::css('nglasl/silverstripe-mediawesome: client/css/mediawesome.css');
             $fields->addFieldToTab('Root.Main', LiteralField::create(
                 'MediaNotification',
-                "<p class='mediawesome notification'><strong>Mixed {$mediaTypeTitle} Holder</strong></p>"
+                "<p class='mediawesome notification'><strong>Mixed " . htmlspecialchars($mediaTypeTitle) . " Holder</strong></p>"
             ), 'Type');
         }
 
