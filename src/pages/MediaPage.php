@@ -85,8 +85,11 @@ class MediaPage extends \Page
 
     private static bool $can_be_root = false;
 
-    // this value can be either a string or an array
-    // @phpstan-ignore silverstan.configurationProperty
+    /**
+     * This value can be either a string or an array
+     * @inheritdoc
+     * @phpstan-ignore silverstan.configurationProperty.invalid
+     */
     private static string|array $allowed_children = 'none';
 
     private static string $default_parent = MediaHolder::class;
@@ -388,8 +391,7 @@ class MediaPage extends \Page
         if ($this->ExternalLink) {
             // The following code was taken from RedirectorPage::onBeforeWrite()
             // on SilverStripe 4.1.1
-            if ($this->ExternalLink &&
-                !str_starts_with($this->ExternalLink, '//')) {
+            if (!str_starts_with($this->ExternalLink, '//')) {
                 $urlParts = parse_url($this->ExternalLink);
                 if ($urlParts) {
                     if (empty($urlParts['scheme'])) {
