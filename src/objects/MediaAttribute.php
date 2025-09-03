@@ -184,7 +184,7 @@ class MediaAttribute extends DataObject
     public function getTemplateClass(): string
     {
 
-        return strtolower($this->OriginalTitle);
+        return strtolower((string) $this->OriginalTitle);
     }
 
 }

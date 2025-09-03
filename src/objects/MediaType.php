@@ -60,7 +60,7 @@ class MediaType extends DataObject
         $config = MediaPage::config();
         return
             !MediaHolder::get()->filter('MediaTypeID', $this->ID)->exists()
-            && !isset($config->type_defaults[$this->Title]);
+            && !isset($config->get('type_defaults')[$this->Title]);
     }
 
     /**
