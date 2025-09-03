@@ -6,7 +6,6 @@ use SilverStripe\CMS\Controllers\ModelAsController;
 use SilverStripe\CMS\Controllers\OldPageRedirector;
 use SilverStripe\Control\HTTP;
 use SilverStripe\Control\HTTPRequest;
-use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Convert;
 use SilverStripe\Forms\DateField;
 use SilverStripe\Forms\FieldList;

@@ -4,7 +4,6 @@ namespace nglasl\mediawesome;
 
 use SilverStripe\Assets\File;
 use SilverStripe\Assets\Image;
-use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPResponse_Exception;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\DateField;
